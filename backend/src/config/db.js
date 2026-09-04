@@ -1,11 +1,9 @@
-const {
-  Pool
-} = require('pg');
+const { Pool } = require('pg');
 require('dotenv').config();
 
 async function ensureDatabase() {
   if (process.env.DATABASE_URL) {
-    console.log('’DATABASE_URL detectada. Omitiendo comprobacion local de DB.');
+    console.log('⚡ DATABASE_URL detectada. Omitiendo comprobacion local de DB.');
     return;
   }
   const dbName = process.env.DB_NAME || 'crm_ai';
@@ -28,8 +26,13 @@ async function ensureDatabase() {
   }
 }
 
-const poolConfig = process.env.DATABASE_URL
-  ? { connectionString: process.env.DATABASE_URL }
+// Reemplazamos automticamente sslmode=require por sslmode=verify-full para evitar warnings de seguridad en Node.js pg driver
+const connectionString = process.env.DATABASE_URL
+  ? process.env.DATABASE_URL.replace('sslmode=require', 'sslmode=verify-full')
+  : null;
+
+const poolConfig = connectionString
+  ? { connectionString }
   : {
     host: process.env.DB_HOST || 'localhost',
     port: parseInt(process.env.DB_PORT) || 5432,
@@ -37,8 +40,9 @@ const poolConfig = process.env.DATABASE_URL
     user: process.env.DB_USER || 'postgres',
     password: process.env.DB_PASSWORD || 'postgres',
   };
+
 const pool = new Pool(poolConfig);
-pool.on('connect', () => console.log('’ Conectado a PostgreSQL'));
-pool.on('error', (err) => console.error('’ Error PG:', err.message));
+pool.on('connect', () => console.log('✅ Conectado a PostgreSQL'));
+pool.on('error', (err) => console.error('❌ Error PG:', err.message));
 
 module.exports = { pool, ensureDatabase };

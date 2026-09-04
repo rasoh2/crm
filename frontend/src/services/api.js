@@ -13,7 +13,7 @@ let authToken = localStorage.getItem('crm_token');
 api.interceptors.request.use(async (config) => {
   if (!authToken && !config.url.includes('/auth/demo-token')) {
     try {
-      const res = await axios.post(`${API_URL}/auth/demo-token`);
+      const res = await axios.post(`${API_URL}/auth/demo-token`, {});
       if (res.data?.data?.token) {
         authToken = res.data.data.token;
         localStorage.setItem('crm_token', authToken);

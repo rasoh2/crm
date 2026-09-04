@@ -1,0 +1,214 @@
+/* CRM Comercial — Sistema de Diseño Corporativo y Elegante */
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+
+:root {
+  --crm-font: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --crm-bg: #f8fafc;
+  --crm-card-bg: #ffffff;
+  --crm-border-color: #e2e8f0;
+}
+
+body {
+  font-family: var(--crm-font);
+  background-color: var(--crm-bg);
+  color: #0f172a;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ========================================
+   Badge Styles (Etapas y Prioridades)
+   ======================================== */
+.crm-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.28rem 0.65rem;
+  font-size: 0.76rem;
+  font-weight: 600;
+  border-radius: 9999px;
+  line-height: 1;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  transition: all 0.15s ease-in-out;
+}
+
+.crm-badge-icon {
+  font-size: 0.85rem;
+  flex-shrink: 0;
+}
+
+/* Prioridades */
+.badge-priority-critica {
+  background-color: #fff1f2;
+  color: #991b1b;
+  border: 1px solid #fecdd3;
+}
+
+.badge-priority-alta {
+  background-color: #fffbeb;
+  color: #92400e;
+  border: 1px solid #fef3c7;
+}
+
+.badge-priority-media {
+  background-color: #f0f9ff;
+  color: #075985;
+  border: 1px solid #bae6fd;
+}
+
+.badge-priority-baja {
+  background-color: #f8fafc;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+}
+
+/* Etapas Comercial */
+.badge-stage-lead {
+  background-color: #f1f5f9;
+  color: #475569;
+  border: 1px solid #cbd5e1;
+}
+
+.badge-stage-contactado {
+  background-color: #ecfeff;
+  color: #0891b2;
+  border: 1px solid #a5f3fc;
+}
+
+.badge-stage-diagnostico {
+  background-color: #eff6ff;
+  color: #2563eb;
+  border: 1px solid #bfdbfe;
+}
+
+.badge-stage-propuesta {
+  background-color: #fefce8;
+  color: #ca8a04;
+  border: 1px solid #fef08a;
+}
+
+.badge-stage-negociacion {
+  background-color: #fff7ed;
+  color: #ea580c;
+  border: 1px solid #ffedd5;
+}
+
+.badge-stage-ganado {
+  background-color: #f0fdf4;
+  color: #166534;
+  border: 1px solid #bbf7d0;
+}
+
+.badge-stage-perdido {
+  background-color: #fef2f2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+}
+
+/* ========================================
+   Botones de Acción Personalizados
+   ======================================== */
+.btn-action-icon {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  transition: all 0.2s ease-in-out;
+  border: 1px solid transparent;
+}
+
+.btn-action-icon:hover {
+  transform: translateY(-1.5px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+}
+
+.btn-action-view {
+  background-color: #eff6ff;
+  color: #2563eb;
+  border-color: #bfdbfe;
+}
+
+.btn-action-view:hover {
+  background-color: #2563eb;
+  color: #ffffff;
+}
+
+.btn-action-edit {
+  background-color: #fffbeb;
+  color: #d97706;
+  border-color: #fde68a;
+}
+
+.btn-action-edit:hover {
+  background-color: #d97706;
+  color: #ffffff;
+}
+
+.btn-action-delete {
+  background-color: #fef2f2;
+  color: #dc2626;
+  border-color: #fecaca;
+}
+
+.btn-action-delete:hover {
+  background-color: #dc2626;
+  color: #ffffff;
+}
+
+/* ========================================
+   Estilos de Tablas y Contenedores
+   ======================================== */
+.table-crm {
+  background-color: #ffffff;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.table-crm th {
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #64748b;
+  background-color: #f8fafc !important;
+  border-bottom: 2px solid #e2e8f0;
+  padding: 0.85rem 0.75rem;
+}
+
+.table-crm td {
+  padding: 0.85rem 0.75rem;
+  vertical-align: middle;
+  font-size: 0.9rem;
+  color: #1e293b;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.table-crm tbody tr:hover {
+  background-color: #f8fafc !important;
+}
+
+/* Chat content markdown */
+.chat-content p {
+  margin-bottom: 0.5rem;
+}
+
+.chat-content p:last-child {
+  margin-bottom: 0;
+}
+
+.chat-content ul,
+.chat-content ol {
+  margin-bottom: 0.5rem;
+  padding-left: 1.5rem;
+}
+
+.chat-content code {
+  background-color: rgba(0, 0, 0, 0.05);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.9em;
+}

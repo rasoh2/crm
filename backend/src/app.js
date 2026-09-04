@@ -19,7 +19,7 @@ app.use(helmet());
 // 2. CORS y Middlewares globales
 // ========================================
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
+  origin: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));

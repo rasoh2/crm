@@ -3,13 +3,14 @@ const { Server } = require('socket.io');
 let io = null;
 
 /**
- * Inicializa el servidor WebSocket adjuntándolo al servidor HTTP de Node.js.
+ * Inicializa el servidor WebSocket adjuntandolo al servidor HTTP de Node.js.
  */
 function initSocket(httpServer) {
   io = new Server(httpServer, {
     cors: {
-      origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
+      origin: true,
       methods: ['GET', 'POST', 'PUT', 'DELETE'],
+      credentials: true,
     },
   });
 

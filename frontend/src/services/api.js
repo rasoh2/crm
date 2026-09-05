@@ -1,13 +1,18 @@
 import axios from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+// En produccin, si VITE_API_URL no est definida o apunta a localhost, usar el backend activo en Render
+const API_URL = (import.meta.env.VITE_API_URL && !import.meta.env.VITE_API_URL.includes('localhost'))
+  ? import.meta.env.VITE_API_URL
+  : (import.meta.env.MODE === 'production'
+      ? 'https://crm-bo95.onrender.com/api'
+      : 'http://localhost:3001/api');
 
 const api = axios.create({
   baseURL: API_URL,
   headers: { 'Content-Type': 'application/json' },
 });
 
-// Interceptor para adjuntar automáticamente el token JWT de sesión
+// Interceptor para adjuntar automticamente el token JWT de sesin
 let authToken = localStorage.getItem('crm_token');
 
 api.interceptors.request.use(async (config) => {
@@ -19,7 +24,7 @@ api.interceptors.request.use(async (config) => {
         localStorage.setItem('crm_token', authToken);
       }
     } catch (err) {
-      console.warn('⚠️ No se pudo obtener token JWT automático:', err.message);
+      console.warn('⚠️ No se pudo obtener token JWT automatico:', err.message);
     }
   }
 

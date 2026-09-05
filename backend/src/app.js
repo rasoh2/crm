@@ -12,8 +12,13 @@ const app = express();
 
 // ========================================
 // 1. Cabeceras de Seguridad HTTP (Helmet)
+// Permite solicitudes Cross-Origin entre Netlify y Render
 // ========================================
-app.use(helmet());
+app.use(
+  helmet({
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+  })
+);
 
 // ========================================
 // 2. CORS y Middlewares globales
@@ -32,10 +37,10 @@ app.use('/api', apiLimiter);
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
-// Log de requests en development
+// Log de requests en desarrollo
 if (process.env.NODE_ENV !== 'production') {
   app.use((req, res, next) => {
-    console.log(`📨 ${req.method} ${req.path}`);
+    console.log(`📡 ${req.method} ${req.path}`);
     next();
   });
 }

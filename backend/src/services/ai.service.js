@@ -5,93 +5,64 @@ const { pool } = require('../config/db');
 const fs = require('fs');
 const path = require('path');
 
-/**
- * Servicio de IA — Lógica de integración con Gemini.
- * SEPARADO de la lógica de negocio del CRM (opportunities.service.js).
- * Implementa function calling para que Gemini consulte datos reales.
- */
-
-// Cargar system prompt desde archivo (versionado)
-const systemPrompt = fs.readFileSync(
-  path.join(__dirname, '../config/prompts/system-prompt-v1.md'),
-  'utf-8'
-);
+// ========================================
+// Cargar System Prompt desde archivo .md
+// ========================================
+let systemPrompt = '';
+try {
+  const promptPath = path.join(__dirname, '../config/prompts/system-prompt.md');
+  systemPrompt = fs.readFileSync(promptPath, 'utf8');
+} catch (err) {
+  console.warn('⚠️ No se pudo cargar system-prompt.md, usando prompt por defecto');
+  systemPrompt = 'Eres un Asistente Comercial IA experto en CRM. Responde usando solo datos reales del sistema.';
+}
 
 // ========================================
-// Definición de funciones para Gemini
-// (Function Calling / Tool Use)
+// Declaración de Herramientas (Tools / Function Calling)
 // ========================================
 const tools = [
   {
     functionDeclarations: [
       {
         name: 'getOpportunities',
-        description:
-          'Obtiene la lista de todas las oportunidades comerciales del CRM, opcionalmente filtradas por etapa, prioridad o responsable.',
+        description: 'Obtiene todas las oportunidades del CRM o filtradas por etapa, prioridad o responsable.',
         parameters: {
           type: 'OBJECT',
           properties: {
-            stage: {
-              type: 'STRING',
-              description:
-                'Filtrar por etapa: Lead nuevo, Contactado, Diagnóstico, Propuesta enviada, Negociación, Ganado, Perdido',
-            },
-            priority: {
-              type: 'STRING',
-              description: 'Filtrar por prioridad: Baja, Media, Alta, Crítica',
-            },
-            owner: {
-              type: 'STRING',
-              description: 'Filtrar por responsable (nombre parcial)',
-            },
+            stage: { type: 'STRING', description: 'Etapa comercial' },
+            priority: { type: 'STRING', description: 'Prioridad' },
+            owner: { type: 'STRING', description: 'Responsable' },
           },
         },
       },
       {
         name: 'getOpportunityById',
-        description: 'Obtiene los detalles completos de una oportunidad específica por su ID.',
+        description: 'Obtiene el detalle completo de una oportunidad comercial específica por su ID.',
         parameters: {
           type: 'OBJECT',
           properties: {
-            id: {
-              type: 'STRING',
-              description: 'UUID de la oportunidad',
-            },
+            id: { type: 'STRING', description: 'ID de la oportunidad' },
           },
           required: ['id'],
         },
       },
       {
         name: 'getTopByProbability',
-        description:
-          'Obtiene las oportunidades con mayor probabilidad de cierre, excluyendo las ganadas y perdidas.',
+        description: 'Obtiene las oportunidades activas con mayor probabilidad de cierre.',
         parameters: {
           type: 'OBJECT',
           properties: {
-            limit: {
-              type: 'NUMBER',
-              description: 'Número máximo de resultados (default 5)',
-            },
+            limit: { type: 'NUMBER', description: 'Cantidad de oportunidades a retornar (default: 5)' },
           },
         },
       },
       {
         name: 'getFollowUpsThisWeek',
-        description:
-          'Obtiene las oportunidades que necesitan seguimiento esta semana (próximos 7 días).',
-        parameters: {
-          type: 'OBJECT',
-          properties: {},
-        },
+        description: 'Obtiene las oportunidades que requieren seguimiento durante la ventana de la semana actual.',
       },
       {
         name: 'getPipelineSummary',
-        description:
-          'Obtiene un resumen ejecutivo del pipeline: total de oportunidades, valor total, promedio de probabilidad, conteos por estado y prioridad.',
-        parameters: {
-          type: 'OBJECT',
-          properties: {},
-        },
+        description: 'Obtiene un resumen cuantitativo completo de todo el pipeline comercial (totales, suma por etapa, promedios).',
       },
       {
         name: 'getOpportunitiesByPriority',
@@ -99,10 +70,7 @@ const tools = [
         parameters: {
           type: 'OBJECT',
           properties: {
-            priority: {
-              type: 'STRING',
-              description: 'Nivel de prioridad: Baja, Media, Alta, Crítica',
-            },
+            priority: { type: 'STRING', description: 'Nivel de prioridad: Baja, Media, Alta, Crítica' },
           },
           required: ['priority'],
         },
@@ -113,31 +81,19 @@ const tools = [
         parameters: {
           type: 'OBJECT',
           properties: {
-            owner: {
-              type: 'STRING',
-              description: 'Nombre del responsable (ej: LABS IA, Carlos, etc)',
-            },
+            owner: { type: 'STRING', description: 'Nombre del responsable' },
           },
           required: ['owner'],
         },
       },
       {
         name: 'searchOpportunityDocuments',
-        description:
-          'Busca y recupera fragmentos relevantes de documentos técnicos, propuestas en PDF/texto, SLAs, requisitos de seguridad y especificaciones de arquitectura asociados a las oportunidades comerciales.',
+        description: 'Busca y recupera fragmentos relevantes de documentos técnicos, propuestas en PDF/texto, SLAs y requisitos.',
         parameters: {
           type: 'OBJECT',
           properties: {
-            query: {
-              type: 'STRING',
-              description:
-                'Término de búsqueda o palabras clave (ej: seguridad, sla, cifrado, hipaa, iot, latencia, soporte)',
-            },
-            companyName: {
-              type: 'STRING',
-              description:
-                'Nombre opcional de la empresa u oportunidad para filtrar los documentos (ej: Starlight Aerospace, Nouveau BioTech)',
-            },
+            query: { type: 'STRING', description: 'Término de búsqueda o palabras clave' },
+            companyName: { type: 'STRING', description: 'Nombre opcional de la empresa u oportunidad' },
           },
           required: ['query'],
         },
@@ -146,22 +102,16 @@ const tools = [
   },
 ];
 
-// ========================================
-// Ejecutar funciones llamadas por Gemini
-// ========================================
 async function executeFunctionCall(functionCall) {
   const { name, args } = functionCall;
 
   switch (name) {
     case 'getOpportunities':
       return await OpportunityService.getAll(args || {});
-
     case 'getOpportunityById':
       return await OpportunityService.getById(args.id);
-
     case 'getTopByProbability':
       return await OpportunityService.getTopByProbability(args.limit || 5);
-
     case 'getFollowUpsThisWeek': {
       const today = new Date();
       const nextWeek = new Date();
@@ -171,19 +121,14 @@ async function executeFunctionCall(functionCall) {
         nextWeek.toISOString().split('T')[0]
       );
     }
-
     case 'getPipelineSummary':
       return await OpportunityService.getPipelineSummary();
-
     case 'getOpportunitiesByPriority':
       return await OpportunityService.getByPriority(args.priority);
-
     case 'getOpportunitiesByOwner':
       return await OpportunityService.getByOwner(args.owner);
-
     case 'searchOpportunityDocuments':
       return searchDocuments(args.query, args.companyName || '');
-
     default:
       return { error: `Función desconocida: ${name}` };
   }
@@ -192,13 +137,11 @@ async function executeFunctionCall(functionCall) {
 function formatChatHistory(conversationHistory, currentUserMessage) {
   if (!Array.isArray(conversationHistory)) return [];
 
-  // Mapear roles: 'assistant' -> 'model', 'user' -> 'user'
   let formatted = conversationHistory.map((msg) => ({
     role: msg.role === 'assistant' ? 'model' : msg.role,
     parts: [{ text: msg.content || '' }],
   }));
 
-  // Eliminar el último mensaje si coincide con el mensaje actual del usuario o si es un 'user' al final
   if (formatted.length > 0 && formatted[formatted.length - 1].role === 'user') {
     const lastContent = formatted[formatted.length - 1].parts[0]?.text;
     if (lastContent === currentUserMessage || formatted.length % 2 !== 0) {
@@ -206,12 +149,10 @@ function formatChatHistory(conversationHistory, currentUserMessage) {
     }
   }
 
-  // Eliminar mensajes iniciales 'model' (Gemini exige que el historial comience con 'user')
   while (formatted.length > 0 && formatted[0].role !== 'user') {
     formatted.shift();
   }
 
-  // Asegurar alternancia estricta entre 'user' y 'model'
   const cleanHistory = [];
   for (const item of formatted) {
     if (cleanHistory.length === 0) {
@@ -224,7 +165,6 @@ function formatChatHistory(conversationHistory, currentUserMessage) {
     }
   }
 
-  // Si termina en 'user', removerlo para que la llamada a sendMessage(userMessage) sea la siguiente
   if (cleanHistory.length > 0 && cleanHistory[cleanHistory.length - 1].role === 'user') {
     cleanHistory.pop();
   }
@@ -244,35 +184,23 @@ async function processMessage(userMessage, conversationHistory = []) {
       systemInstruction: systemPrompt,
     });
 
-    // Construir historial de conversación sanitizado para Gemini
     const chatHistory = formatChatHistory(conversationHistory, userMessage);
+    const chat = model.startChat({ history: chatHistory });
 
-    const chat = model.startChat({
-      history: chatHistory,
-    });
-
-    // Enviar mensaje del usuario
     let result = await chat.sendMessage(userMessage);
     let response = result.response;
 
-    // Loop de function calling: Gemini puede llamar múltiples funciones
-    let maxIterations = 5; // Prevenir loops infinitos
+    let maxIterations = 5;
     while (maxIterations > 0) {
       const candidate = response.candidates?.[0];
       const parts = candidate?.content?.parts || [];
-
-      // Buscar function calls en la respuesta
       const functionCalls = parts.filter((p) => p.functionCall);
 
-      if (functionCalls.length === 0) {
-        // No hay más function calls — Gemini terminó
-        break;
-      }
+      if (functionCalls.length === 0) break;
 
-      // Ejecutar todas las function calls
       const functionResponses = [];
       for (const part of functionCalls) {
-        console.log(`🔧 Function call: ${part.functionCall.name}`, part.functionCall.args);
+        console.log(`🤖 Function call: ${part.functionCall.name}`, part.functionCall.args);
         const data = await executeFunctionCall(part.functionCall);
         functionResponses.push({
           functionResponse: {
@@ -282,50 +210,34 @@ async function processMessage(userMessage, conversationHistory = []) {
         });
       }
 
-      // Enviar resultados de las funciones de vuelta a Gemini
       result = await chat.sendMessage(functionResponses);
       response = result.response;
       maxIterations--;
     }
 
-    // Extraer texto de la respuesta final
     const textParts = response.candidates?.[0]?.content?.parts || [];
     const responseText = textParts
       .filter((p) => p.text)
       .map((p) => p.text)
       .join('\n');
 
-    // Guardar en historial (bonus)
     await saveChatMessage('user', userMessage);
     await saveChatMessage('assistant', responseText);
 
     return {
-      response: responseText,
+      response: responseText || 'Sin respuesta del modelo.',
       timestamp: new Date().toISOString(),
     };
   } catch (error) {
-    console.error('❌ Error en AI Service:', error.message);
-
-    // Respuesta controlada ante errores
-    if (error.message.includes('API key')) {
-      return {
-        response:
-          'No se pudo conectar con el asistente de IA. Verifica que la API key de Gemini esté configurada correctamente en el archivo .env.',
-        error: true,
-      };
-    }
+    console.error('❌ Error en AI Service:', error);
 
     return {
-      response:
-        'Ocurrió un error al procesar tu consulta. Por favor, intenta de nuevo.',
+      response: `Detalle del error devuelto por la API de Gemini: ${error.message}`,
       error: true,
     };
   }
 }
 
-// ========================================
-// Historial de conversaciones (bonus)
-// ========================================
 async function saveChatMessage(role, content) {
   try {
     await pool.query(
@@ -333,8 +245,7 @@ async function saveChatMessage(role, content) {
       [role, content]
     );
   } catch (error) {
-    // No fallar si el historial no se puede guardar
-    console.warn('⚠️  No se pudo guardar el historial:', error.message);
+    console.warn('⚠️ No se pudo guardar el historial:', error.message);
   }
 }
 
@@ -344,7 +255,7 @@ async function getChatHistory(limit = 20) {
       'SELECT role, content, created_at FROM chat_history ORDER BY created_at DESC LIMIT $1',
       [limit]
     );
-    return result.rows.reverse(); // Más antiguo primero
+    return result.rows.reverse();
   } catch (error) {
     return [];
   }

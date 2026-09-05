@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-// En produccin, si VITE_API_URL no est definida o apunta a localhost, usar el backend activo en Render
+// En produccion, si VITE_API_URL no esta definida o apunta a localhost, usar el backend activo en Render
 const API_URL = (import.meta.env.VITE_API_URL && !import.meta.env.VITE_API_URL.includes('localhost'))
   ? import.meta.env.VITE_API_URL
   : (import.meta.env.MODE === 'production'
@@ -12,7 +12,7 @@ const api = axios.create({
   headers: { 'Content-Type': 'application/json' },
 });
 
-// Interceptor para adjuntar automticamente el token JWT de sesin
+// Interceptor para adjuntar automaticamente el token JWT de sesion
 let authToken = localStorage.getItem('crm_token');
 
 api.interceptors.request.use(async (config) => {
@@ -33,6 +33,31 @@ api.interceptors.request.use(async (config) => {
   }
   return config;
 });
+
+// Interceptor de respuesta para recuperar automaticamente ante tokens 401/403 viejos o expirados
+api.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const originalRequest = error.config;
+    if ((error.response?.status === 401 || error.response?.status === 403) && !originalRequest._retry) {
+      originalRequest._retry = true;
+      localStorage.removeItem('crm_token');
+      authToken = null;
+      try {
+        const res = await axios.post(`${API_URL}/auth/demo-token`, {});
+        if (res.data?.data?.token) {
+          authToken = res.data.data.token;
+          localStorage.setItem('crm_token', authToken);
+          originalRequest.headers['Authorization'] = `Bearer ${authToken}`;
+          return api(originalRequest);
+        }
+      } catch (err) {
+        console.error('Error al renovar token demo:', err);
+      }
+    }
+    return Promise.reject(error);
+  }
+);
 
 // ========================================
 // Oportunidades

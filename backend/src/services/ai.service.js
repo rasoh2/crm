@@ -10,7 +10,10 @@ const path = require('path');
 // ========================================
 let systemPrompt = '';
 try {
-  const promptPath = path.join(__dirname, '../config/prompts/system-prompt.md');
+  let promptPath = path.join(__dirname, '../config/prompts/system-prompt.md');
+  if (!fs.existsSync(promptPath)) {
+    promptPath = path.join(__dirname, '../config/prompts/system-prompt-v1.md');
+  }
   systemPrompt = fs.readFileSync(promptPath, 'utf8');
 } catch (err) {
   console.warn('⚠️ No se pudo cargar system-prompt.md, usando prompt por defecto');
@@ -18,7 +21,7 @@ try {
 }
 
 // ========================================
-// Declaración de Herramientas (Tools / Function Calling)
+// Declaracion de Herramientas (Tools / Function Calling)
 // ========================================
 const tools = [
   {
@@ -37,7 +40,7 @@ const tools = [
       },
       {
         name: 'getOpportunityById',
-        description: 'Obtiene el detalle completo de una oportunidad comercial específica por su ID.',
+        description: 'Obtiene el detalle completo de una oportunidad comercial especifica por su ID.',
         parameters: {
           type: 'OBJECT',
           properties: {
@@ -70,14 +73,14 @@ const tools = [
         parameters: {
           type: 'OBJECT',
           properties: {
-            priority: { type: 'STRING', description: 'Nivel de prioridad: Baja, Media, Alta, Crítica' },
+            priority: { type: 'STRING', description: 'Nivel de prioridad: Baja, Media, Alta, Critica' },
           },
           required: ['priority'],
         },
       },
       {
         name: 'getOpportunitiesByOwner',
-        description: 'Obtiene oportunidades asignadas a un responsable específico.',
+        description: 'Obtiene oportunidades asignadas a un responsable especifico.',
         parameters: {
           type: 'OBJECT',
           properties: {
@@ -88,11 +91,11 @@ const tools = [
       },
       {
         name: 'searchOpportunityDocuments',
-        description: 'Busca y recupera fragmentos relevantes de documentos técnicos, propuestas en PDF/texto, SLAs y requisitos.',
+        description: 'Busca y recupera fragmentos relevantes de documentos tecnicos, propuestas en PDF/texto, SLAs y requisitos.',
         parameters: {
           type: 'OBJECT',
           properties: {
-            query: { type: 'STRING', description: 'Término de búsqueda o palabras clave' },
+            query: { type: 'STRING', description: 'Termino de busqueda o palabras clave' },
             companyName: { type: 'STRING', description: 'Nombre opcional de la empresa u oportunidad' },
           },
           required: ['query'],
@@ -130,7 +133,7 @@ async function executeFunctionCall(functionCall) {
     case 'searchOpportunityDocuments':
       return searchDocuments(args.query, args.companyName || '');
     default:
-      return { error: `Función desconocida: ${name}` };
+      return { error: `Funcion desconocida: ${name}` };
   }
 }
 
@@ -172,6 +175,21 @@ function formatChatHistory(conversationHistory, currentUserMessage) {
   return cleanHistory;
 }
 
+/**
+ * Reintento automatico con backoff para tolerancia a fallos temporales de Google API (503 Service Unavailable).
+ */
+async function sendMessageWithRetry(chat, messagePayload, maxRetries = 3) {
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      return await chat.sendMessage(messagePayload);
+    } catch (err) {
+      if (i === maxRetries - 1) throw err;
+      console.warn(`⚠️ Reintento (${i + 1}/${maxRetries}) tras pico en API Gemini:`, err.message);
+      await new Promise((r) => setTimeout(r, 1000 * (i + 1)));
+    }
+  }
+}
+
 // ========================================
 // Procesar mensaje del usuario
 // ========================================
@@ -187,7 +205,7 @@ async function processMessage(userMessage, conversationHistory = []) {
     const chatHistory = formatChatHistory(conversationHistory, userMessage);
     const chat = model.startChat({ history: chatHistory });
 
-    let result = await chat.sendMessage(userMessage);
+    let result = await sendMessageWithRetry(chat, userMessage);
     let response = result.response;
 
     let maxIterations = 5;
@@ -200,7 +218,7 @@ async function processMessage(userMessage, conversationHistory = []) {
 
       const functionResponses = [];
       for (const part of functionCalls) {
-        console.log(`🤖 Function call: ${part.functionCall.name}`, part.functionCall.args);
+        console.log(`🔧 Function call: ${part.functionCall.name}`, part.functionCall.args);
         const data = await executeFunctionCall(part.functionCall);
         functionResponses.push({
           functionResponse: {
@@ -210,7 +228,7 @@ async function processMessage(userMessage, conversationHistory = []) {
         });
       }
 
-      result = await chat.sendMessage(functionResponses);
+      result = await sendMessageWithRetry(chat, functionResponses);
       response = result.response;
       maxIterations--;
     }

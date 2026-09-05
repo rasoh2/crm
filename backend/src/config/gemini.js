@@ -3,13 +3,13 @@ require('dotenv').config();
 
 /**
  * Configuración del cliente Gemini.
- * Separado de ai.service.js para permitir cambiar de modelo fácilmente.
+ * Modelo oficial de Google Gemini API: gemini-1.5-flash
  */
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 
 const geminiConfig = {
-  model: 'gemini-3.1-flash-lite',
+  model: process.env.GEMINI_MODEL || 'gemini-1.5-flash',
   generationConfig: {
     temperature: 0.3, // Bajo para respuestas más precisas y menos creativas
     topP: 0.8,

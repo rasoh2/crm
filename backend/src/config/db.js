@@ -26,20 +26,20 @@ async function ensureDatabase() {
   }
 }
 
-// Reemplazamos automticamente sslmode=require por sslmode=verify-full para evitar warnings de seguridad en Node.js pg driver
-const connectionString = process.env.DATABASE_URL
-  ? process.env.DATABASE_URL.replace('sslmode=require', 'sslmode=verify-full')
-  : null;
-
-const poolConfig = connectionString
-  ? { connectionString }
+const poolConfig = process.env.DATABASE_URL
+  ? {
+      connectionString: process.env.DATABASE_URL,
+      ssl: process.env.DATABASE_URL.includes('localhost')
+        ? false
+        : { rejectUnauthorized: false }
+    }
   : {
-    host: process.env.DB_HOST || 'localhost',
-    port: parseInt(process.env.DB_PORT) || 5432,
-    database: process.env.DB_NAME || 'crm_ai',
-    user: process.env.DB_USER || 'postgres',
-    password: process.env.DB_PASSWORD || 'postgres',
-  };
+      host: process.env.DB_HOST || 'localhost',
+      port: parseInt(process.env.DB_PORT) || 5432,
+      database: process.env.DB_NAME || 'crm_ai',
+      user: process.env.DB_USER || 'postgres',
+      password: process.env.DB_PASSWORD || 'postgres',
+    };
 
 const pool = new Pool(poolConfig);
 pool.on('connect', () => console.log('✅ Conectado a PostgreSQL'));

@@ -2,16 +2,17 @@ const { GoogleGenerativeAI } = require('@google/generative-ai');
 require('dotenv').config();
 
 /**
- * Configuración del cliente Gemini.
- * Modelo oficial activo de Google Gemini API: gemini-3.6-flash
+ * Configuracion del cliente Gemini.
+ * Usamos gemini-3.5-flash-lite como modelo primario optimizado para velocidad y cuota free.
  */
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 
 const geminiConfig = {
-  model: process.env.GEMINI_MODEL || 'gemini-3.6-flash',
+  model: process.env.GEMINI_MODEL || 'gemini-3.5-flash-lite',
+  fallbackModel: 'gemini-3.6-flash',
   generationConfig: {
-    temperature: 0.3, // Bajo para respuestas más precisas
+    temperature: 0.3,
     topP: 0.8,
     maxOutputTokens: 2048,
   },

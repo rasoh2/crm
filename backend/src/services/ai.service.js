@@ -20,130 +20,15 @@ try {
   systemPrompt = 'Eres un Asistente Comercial IA experto en CRM. Responde usando solo datos reales del sistema.';
 }
 
-// ========================================
-// Declaracion de Herramientas (Tools / Function Calling)
-// ========================================
-const tools = [
-  {
-    functionDeclarations: [
-      {
-        name: 'getOpportunities',
-        description: 'Obtiene todas las oportunidades del CRM o filtradas por etapa, prioridad o responsable.',
-        parameters: {
-          type: 'OBJECT',
-          properties: {
-            stage: { type: 'STRING', description: 'Etapa comercial' },
-            priority: { type: 'STRING', description: 'Prioridad' },
-            owner: { type: 'STRING', description: 'Responsable' },
-          },
-        },
-      },
-      {
-        name: 'getOpportunityById',
-        description: 'Obtiene el detalle completo de una oportunidad comercial especifica por su ID.',
-        parameters: {
-          type: 'OBJECT',
-          properties: {
-            id: { type: 'STRING', description: 'ID de la oportunidad' },
-          },
-          required: ['id'],
-        },
-      },
-      {
-        name: 'getTopByProbability',
-        description: 'Obtiene las oportunidades activas con mayor probabilidad de cierre.',
-        parameters: {
-          type: 'OBJECT',
-          properties: {
-            limit: { type: 'NUMBER', description: 'Cantidad de oportunidades a retornar (default: 5)' },
-          },
-        },
-      },
-      {
-        name: 'getFollowUpsThisWeek',
-        description: 'Obtiene las oportunidades que requieren seguimiento durante la ventana de la semana actual.',
-      },
-      {
-        name: 'getPipelineSummary',
-        description: 'Obtiene un resumen cuantitativo completo de todo el pipeline comercial (totales, suma por etapa, promedios).',
-      },
-      {
-        name: 'getOpportunitiesByPriority',
-        description: 'Obtiene oportunidades filtradas por nivel de prioridad.',
-        parameters: {
-          type: 'OBJECT',
-          properties: {
-            priority: { type: 'STRING', description: 'Nivel de prioridad: Baja, Media, Alta, Critica' },
-          },
-          required: ['priority'],
-        },
-      },
-      {
-        name: 'getOpportunitiesByOwner',
-        description: 'Obtiene oportunidades asignadas a un responsable especifico.',
-        parameters: {
-          type: 'OBJECT',
-          properties: {
-            owner: { type: 'STRING', description: 'Nombre del responsable' },
-          },
-          required: ['owner'],
-        },
-      },
-      {
-        name: 'searchOpportunityDocuments',
-        description: 'Busca y recupera fragmentos relevantes de documentos tecnicos, propuestas en PDF/texto, SLAs y requisitos.',
-        parameters: {
-          type: 'OBJECT',
-          properties: {
-            query: { type: 'STRING', description: 'Termino de busqueda o palabras clave' },
-            companyName: { type: 'STRING', description: 'Nombre opcional de la empresa u oportunidad' },
-          },
-          required: ['query'],
-        },
-      },
-    ],
-  },
-];
-
-async function executeFunctionCall(functionCall) {
-  const { name, args } = functionCall;
-
-  switch (name) {
-    case 'getOpportunities':
-      return await OpportunityService.getAll(args || {});
-    case 'getOpportunityById':
-      return await OpportunityService.getById(args.id);
-    case 'getTopByProbability':
-      return await OpportunityService.getTopByProbability(args.limit || 5);
-    case 'getFollowUpsThisWeek': {
-      const today = new Date();
-      const nextWeek = new Date();
-      nextWeek.setDate(today.getDate() + 7);
-      return await OpportunityService.getFollowUps(
-        today.toISOString().split('T')[0],
-        nextWeek.toISOString().split('T')[0]
-      );
-    }
-    case 'getPipelineSummary':
-      return await OpportunityService.getPipelineSummary();
-    case 'getOpportunitiesByPriority':
-      return await OpportunityService.getByPriority(args.priority);
-    case 'getOpportunitiesByOwner':
-      return await OpportunityService.getByOwner(args.owner);
-    case 'searchOpportunityDocuments':
-      return searchDocuments(args.query, args.companyName || '');
-    default:
-      return { error: `Funcion desconocida: ${name}` };
-  }
-}
-
 function formatChatHistory(conversationHistory, currentUserMessage) {
   if (!Array.isArray(conversationHistory)) return [];
 
-  let formatted = conversationHistory.map((msg) => ({
-    role: msg.role === 'assistant' ? 'model' : msg.role,
-    parts: [{ text: msg.content || '' }],
-  }));
+  let formatted = conversationHistory
+    .filter((msg) => msg && (msg.role === 'user' || msg.role === 'assistant' || msg.role === 'model'))
+    .map((msg) => ({
+      role: msg.role === 'assistant' ? 'model' : msg.role,
+      parts: [{ text: msg.content || '' }],
+    }));
 
   if (formatted.length > 0 && formatted[formatted.length - 1].role === 'user') {
     const lastContent = formatted[formatted.length - 1].parts[0]?.text;
@@ -176,7 +61,7 @@ function formatChatHistory(conversationHistory, currentUserMessage) {
 }
 
 /**
- * Reintento automatico con backoff para tolerancia a fallos temporales de Google API (503 Service Unavailable).
+ * Reintento automatico con backoff para tolerancia a fallos temporales de Google API (429 / 503).
  */
 async function sendMessageWithRetry(chat, messagePayload, maxRetries = 3) {
   for (let i = 0; i < maxRetries; i++) {
@@ -184,8 +69,10 @@ async function sendMessageWithRetry(chat, messagePayload, maxRetries = 3) {
       return await chat.sendMessage(messagePayload);
     } catch (err) {
       if (i === maxRetries - 1) throw err;
-      console.warn(`⚠️ Reintento (${i + 1}/${maxRetries}) tras pico en API Gemini:`, err.message);
-      await new Promise((r) => setTimeout(r, 1000 * (i + 1)));
+      const isQuota = err.message.includes('429') || err.message.includes('Quota exceeded');
+      const delay = isQuota ? 3000 * (i + 1) : 1000 * (i + 1);
+      console.warn(`⚠️ Reintento (${i + 1}/${maxRetries}) tras advertencia en API Gemini (${err.message.substring(0, 80)}...): espere ${delay}ms`);
+      await new Promise((r) => setTimeout(r, delay));
     }
   }
 }
@@ -195,43 +82,41 @@ async function sendMessageWithRetry(chat, messagePayload, maxRetries = 3) {
 // ========================================
 async function processMessage(userMessage, conversationHistory = []) {
   try {
+    // 1. Cargar contexto en tiempo real del CRM (Oportunidades + Resumen + RAG de documentos)
+    let crmContextText = '';
+    try {
+      const [opps, summary] = await Promise.all([
+        OpportunityService.getAll({}),
+        OpportunityService.getPipelineSummary(),
+      ]);
+
+      const docResults = searchDocuments(userMessage, '');
+
+      crmContextText = `
+=== DATOS DEL PIPELINE COMERCIAL (REALTIME) ===
+- Resumen Quantitative: ${JSON.stringify(summary, null, 2)}
+- Oportunidades Registradas (${opps.length}): ${JSON.stringify(opps, null, 2)}
+- Documentos / Normativas / SLAs Relacionados (RAG): ${JSON.stringify(docResults, null, 2)}
+================================================
+`;
+    } catch (dbErr) {
+      console.warn('⚠️ No se pudo cargar todo el contexto en tiempo real:', dbErr.message);
+    }
+
+    const selectedModelName = geminiConfig.model;
     const model = genAI.getGenerativeModel({
-      model: geminiConfig.model,
+      model: selectedModelName,
       ...geminiConfig.generationConfig,
-      tools,
       systemInstruction: systemPrompt,
     });
 
     const chatHistory = formatChatHistory(conversationHistory, userMessage);
     const chat = model.startChat({ history: chatHistory });
 
-    let result = await sendMessageWithRetry(chat, userMessage);
-    let response = result.response;
+    const fullPrompt = `${crmContextText}\n\nPREGUNTA DEL USUARIO:\n${userMessage}`;
 
-    let maxIterations = 5;
-    while (maxIterations > 0) {
-      const candidate = response.candidates?.[0];
-      const parts = candidate?.content?.parts || [];
-      const functionCalls = parts.filter((p) => p.functionCall);
-
-      if (functionCalls.length === 0) break;
-
-      const functionResponses = [];
-      for (const part of functionCalls) {
-        console.log(`🔧 Function call: ${part.functionCall.name}`, part.functionCall.args);
-        const data = await executeFunctionCall(part.functionCall);
-        functionResponses.push({
-          functionResponse: {
-            name: part.functionCall.name,
-            response: { data },
-          },
-        });
-      }
-
-      result = await sendMessageWithRetry(chat, functionResponses);
-      response = result.response;
-      maxIterations--;
-    }
+    const result = await sendMessageWithRetry(chat, fullPrompt);
+    const response = result.response;
 
     const textParts = response.candidates?.[0]?.content?.parts || [];
     const responseText = textParts
@@ -248,6 +133,13 @@ async function processMessage(userMessage, conversationHistory = []) {
     };
   } catch (error) {
     console.error('❌ Error en AI Service:', error);
+
+    if (error.message.includes('429') || error.message.includes('Quota exceeded')) {
+      return {
+        response: '⚠️ Has alcanzado temporalmente el límite de consultas gratuitas de la API de Google Gemini (5 por minuto). Por favor espera unos 20 segundos e intenta tu consulta nuevamente.',
+        error: true,
+      };
+    }
 
     return {
       response: `Detalle del error devuelto por la API de Gemini: ${error.message}`,

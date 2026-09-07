@@ -1,20 +1,24 @@
 import { useState, useEffect } from 'react';
 import { Card, Row, Col, Badge, Button, Spinner, Alert } from 'react-bootstrap';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { BsPencil, BsArrowLeft } from 'react-icons/bs';
-import { opportunityApi } from '../../services/api';
+import { BsPencil, BsArrowLeft, BsClockHistory } from 'react-icons/bs';
+import { opportunityApi, auditApi } from '../../services/api';
 import { StageBadge, PriorityBadge } from '../common/CrmBadges';
+import AuditTimeline from './AuditTimeline';
 
 export default function OpportunityDetail() {
 
   const { id } = useParams();
   const navigate = useNavigate();
   const [opp, setOpp] = useState(null);
+  const [logs, setLogs] = useState([]);
+  const [loadingLogs, setLoadingLogs] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
     loadOpportunity();
+    loadAuditLogs();
   }, [id]);
 
   const loadOpportunity = async () => {
@@ -26,6 +30,18 @@ export default function OpportunityDetail() {
       setError('Oportunidad no encontrada');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadAuditLogs = async () => {
+    try {
+      setLoadingLogs(true);
+      const res = await auditApi.getOpportunityLogs(id);
+      setLogs(res.data.data || []);
+    } catch (err) {
+      console.error('Error al cargar logs de auditoría:', err);
+    } finally {
+      setLoadingLogs(false);
     }
   };
 
@@ -131,6 +147,23 @@ export default function OpportunityDetail() {
               <Card.Body>{opp.ai_recommendation}</Card.Body>
             </Card>
           )}
+
+          {/* Historial de Auditoría y Trazabilidad Comercial */}
+          <Card className="mb-3">
+            <Card.Header className="fw-bold bg-light d-flex align-items-center gap-2">
+              <BsClockHistory className="text-primary" />
+              <span>Historial de Auditoría y Cambios</span>
+            </Card.Header>
+            <Card.Body className="p-3">
+              {loadingLogs ? (
+                <div className="text-center py-3">
+                  <Spinner animation="border" size="sm" variant="primary" />
+                </div>
+              ) : (
+                <AuditTimeline logs={logs} />
+              )}
+            </Card.Body>
+          </Card>
         </Col>
 
         <Col md={4}>

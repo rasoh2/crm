@@ -54,11 +54,14 @@ app.get('/api/health', (req, res) => {
 
 app.use('/api/auth', authRoutes);
 
+const auditRoutes = require('./routes/audit.routes');
+
 // ========================================
 // 5. Rutas Protegidas (JWT + Rate Limiter de IA)
 // ========================================
 app.use('/api/opportunities', authenticateToken, opportunitiesRoutes);
 app.use('/api/chat', authenticateToken, chatRateLimiter, chatRoutes);
+app.use('/api/audit-logs', authenticateToken, auditRoutes);
 
 // ========================================
 // 6. Manejo de rutas no encontradas

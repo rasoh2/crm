@@ -67,3 +67,20 @@ CREATE TABLE IF NOT EXISTS chat_history (
 );
 
 CREATE INDEX IF NOT EXISTS idx_chat_history_created ON chat_history(created_at DESC);
+
+-- Tabla para historial de auditoría y trazabilidad comercial
+CREATE TABLE IF NOT EXISTS audit_logs (
+  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  opportunity_id  UUID REFERENCES opportunities(id) ON DELETE CASCADE,
+  action          VARCHAR(50) NOT NULL, -- 'CREATED', 'UPDATED', 'STAGE_CHANGED', 'DELETED'
+  entity_type     VARCHAR(50) NOT NULL DEFAULT 'OPPORTUNITY',
+  changes         JSONB,
+  performed_by    VARCHAR(255) NOT NULL DEFAULT 'Sistema',
+  ip_address      VARCHAR(45),
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_audit_logs_opp_id ON audit_logs(opportunity_id);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_action ON audit_logs(action);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_created ON audit_logs(created_at DESC);
+

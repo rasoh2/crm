@@ -4,7 +4,7 @@
 -- ========================================
 
 -- Limpiar datos anteriores
-TRUNCATE TABLE opportunities, chat_history RESTART IDENTITY;
+TRUNCATE TABLE opportunities, chat_history, audit_logs RESTART IDENTITY CASCADE;
 
 INSERT INTO opportunities (
   company_name, contact_name, contact_email, opportunity_name,
@@ -372,3 +372,10 @@ INSERT INTO opportunities (
   'Demostración en quirófano experimental con equipo de cirujanos.',
   'Enviar documentación de certificación CE/FDA para equipamiento médico.'
 );
+
+-- Insertar auditoría inicial para alimentar la línea de tiempo
+INSERT INTO audit_logs (opportunity_id, action, changes, performed_by, created_at)
+SELECT id, 'CREATED', jsonb_build_object('opportunity_name', opportunity_name, 'company_name', company_name, 'initial_stage', stage, 'initial_value', estimated_value), owner, created_at
+FROM opportunities
+LIMIT 10;
+

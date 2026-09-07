@@ -57,3 +57,9 @@
 - **Reducción del 70% en Tokens**: Evita enviar el catálogo completo de 30 empresas para preguntas simples de métricas o saludos.
 - **Datos 100% Frescos**: A diferencia del Caché Semántico, el Enrutamiento por Intención siempre consulta la BD en tiempo real, evitando mostrar datos obsoletos si se modifica una oportunidad.
 - **Fail-Fast Inmediato (0ms)**: En errores de autenticación (401/403), omite reintentos innecesarios y conmuta de inmediato entre proveedores (Groq LPU ➔ Google Gemini).
+
+## 14. Sistema de Auditoría y Trazabilidad Comercial (Audit Logs) en PostgreSQL
+**Decisión:** Crear la tabla `audit_logs` en PostgreSQL con tipo de dato nativo `JSONB` para almacenar el historial de cambios, autores, acciones (`CREATED`, `STAGE_CHANGED`, `UPDATED`, `DELETED`) y diffs de estado anterior vs. nuevo.
+**Justificación:**
+- **Trazabilidad Empresarial**: Permite auditar exactamente qué usuario cambió una oportunidad de etapa o monto y cuándo ocurrió.
+- **Eficiencia en JSONB**: Almacena únicamente los campos modificados en formato JSON binario indexado, optimizando espacio en disco e inspección en la UI sin requerir múltiples tablas de relación complejas.

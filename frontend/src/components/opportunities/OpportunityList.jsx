@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { Table, Button, Spinner, Alert, Modal, Pagination } from 'react-bootstrap';
 import { Link, useNavigate } from 'react-router-dom';
-import { BsEyeFill, BsPencilSquare, BsTrash3Fill, BsDownload } from 'react-icons/bs';
+import { BsEyeFill, BsPencilSquare, BsTrash3Fill, BsDownload, BsClockHistory } from 'react-icons/bs';
 import { opportunityApi } from '../../services/api';
 import PipelineDashboard from '../dashboard/PipelineDashboard';
 import FilterPanel from '../filters/FilterPanel';
+import AuditModal from './AuditModal';
 import { subscribeToOpportunityEvents } from '../../services/socket';
 import { exportOpportunitiesToCSV } from '../../utils/csv';
 import { StageBadge, PriorityBadge } from '../common/CrmBadges';
@@ -16,6 +17,7 @@ export default function OpportunityList() {
   const [filters, setFilters] = useState({});
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [showDashboard, setShowDashboard] = useState(true);
+  const [showAuditModal, setShowAuditModal] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
   const navigate = useNavigate();
@@ -91,6 +93,14 @@ export default function OpportunityList() {
         <h2 className="fw-bold tracking-tight mb-0 fs-3">📋 Oportunidades Comerciales</h2>
         <div className="d-flex gap-2 mobile-header-actions">
           <Button
+            variant="outline-dark"
+            onClick={() => setShowAuditModal(true)}
+            className="fw-medium"
+            title="Ver el historial completo de auditoría y cambios del CRM"
+          >
+            <BsClockHistory className="me-1 text-warning" /> Auditoría
+          </Button>
+          <Button
             variant="outline-secondary"
             onClick={() => setShowDashboard(!showDashboard)}
             className="fw-medium"
@@ -111,6 +121,8 @@ export default function OpportunityList() {
           </Button>
         </div>
       </div>
+
+      <AuditModal show={showAuditModal} onHide={() => setShowAuditModal(false)} />
 
       {showDashboard && <PipelineDashboard opportunities={opportunities} />}
 

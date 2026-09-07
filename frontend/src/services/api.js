@@ -90,4 +90,12 @@ export const chatApi = {
   getHistory: (limit = 20) => api.get(`/chat/history?limit=${limit}`),
 };
 
+// ========================================
+// Historial de Auditoría
+// ========================================
+export const auditApi = {
+  getAllLogs: (limit = 100) => api.get(`/audit-logs?limit=${limit}`),
+  getOpportunityLogs: (id, limit = 50) => api.get(`/audit-logs/opportunity/${id}?limit=${limit}`),
+};
+
 export default api;

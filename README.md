@@ -269,4 +269,5 @@ Ver [docs/technical-decisions.md](docs/technical-decisions.md) para la lista com
 - 📄 **Paginación Dinámica**: Navegación de 10 en 10 registros con controles interactivos.
 - ⚡ **WebSockets en Tiempo Real**: Sincronización instantánea de eventos con Socket.io.
 - 💱 **Ticker Financiero y Convertidor Multidivisas**: Cotizaciones en tiempo real (USD, EUR, UF, BTC, ETH) y recalculado dinámico del pipeline.
+- 📋 **Historial de Auditoría y Trazabilidad Comercial (Audit Logs)**: Registro persistente en PostgreSQL (`audit_logs`) con diffs JSONB de cambios de estado y timeline interactivo.
 

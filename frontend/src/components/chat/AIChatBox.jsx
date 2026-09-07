@@ -81,12 +81,17 @@ export default function AIChatBox() {
         { role: 'assistant', content: aiResponse },
       ]);
     } catch (err) {
+      console.error('Error al enviar mensaje al chat:', err);
+      const errorMessage =
+        err.response?.data?.error ||
+        err.response?.data?.message ||
+        'Ocurrió un inconveniente al procesar la solicitud. Por favor reintente en unos instantes.';
+
       setMessages((prev) => [
         ...prev,
         {
           role: 'assistant',
-          content:
-            'Ocurrió un inconveniente al procesar la solicitud. Por favor reintente en unos instantes.',
+          content: errorMessage,
         },
       ]);
     } finally {

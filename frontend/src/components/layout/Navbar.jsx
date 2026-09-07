@@ -16,6 +16,10 @@ export default function Navbar() {
       setIsConnected(false);
     }
 
+    if (socket.connected) {
+      setIsConnected(true);
+    }
+
     socket.on('connect', onConnect);
     socket.on('disconnect', onDisconnect);
 

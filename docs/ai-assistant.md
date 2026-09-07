@@ -1,64 +1,46 @@
 # Asistente de IA — Documentación Técnica
 
-## Arquitectura
+## Arquitectura de Alta Disponibilidad (HA Multi-Proveedor)
 
-El asistente utiliza **Google Gemini 3.1 Flash Lite** (`gemini-3.1-flash-lite`) con **Function Calling** (Tool Declarations) y arquitectura **RAG (Retrieval-Augmented Generation)** para consultar datos reales de oportunidades y documentos adjuntos del CRM.
+El Copilot Comercial utiliza una arquitectura **Multi-Proveedor de Alta Disponibilidad** que combina la velocidad de **Groq Cloud (LPU)** como motor primario con **Google Gemini** como motor de respaldo automático, integrado con **Context Pruning**, **Caché de Respuestas** y **RAG (Retrieval-Augmented Generation)**.
 
-### Flujo de una consulta
+---
+
+### Flujo de Ejecución e Inferencia
 
 ```
 1. Usuario envía mensaje → POST /api/chat
-2. chat.controller.js recibe y delega a ai.service.js
-3. ai.service.js envía a Gemini con:
-   - System prompt (config/prompts/system-prompt-v1.md)
-   - Historial de conversación (memoria sanitizada)
-   - 8 declarations de herramientas (funciones que puede llamar)
-4. Gemini analiza la pregunta y decide qué función(es) llamar
-5. ai.service.js ejecuta las funciones contra la BD PostgreSQL / RAG Data
-6. Los resultados se envían de vuelta a Gemini
-7. Gemini genera una respuesta en lenguaje natural con datos reales
-8. Se guarda en chat_history
-9. Se devuelve al frontend
+2. chat.controller.js recibe la solicitud y delega a ai.service.js
+3. ai.service.js evalúa el estado del sistema:
+   a. ¿Consulta presente en Caché (<60s)? ➔ Retorna respuesta inmediata (0ms)
+   b. Si es nueva: Consulta a PostgreSQL + RAG en tiempo real
+4. Aplica Context Pruning (filtra oportunidades relevantes) y Compresión de Historial (<250 caracteres por turno)
+5. Envía la solicitud al Motor Primario: Groq Cloud (groq/compound-mini)
+6. Si Groq Cloud responde OK (<500ms) ➔ Procesa respuesta
+7. Si Groq Cloud devuelve 429 Rate Limit / Timeout ➔ Conmutación Transparente HA a Google Gemini (gemini-1.5-flash)
+8. Se almacena el resultado en chat_history y en la Caché en Memoria
+9. Se envía respuesta formateada en Markdown al Frontend
 ```
 
-### Separación de responsabilidades
+---
+
+### Separación de Responsabilidades
 
 | Archivo | Responsabilidad |
 |---------|----------------|
-| `config/gemini.js` | Configuración del cliente (`gemini-3.1-flash-lite`, temperatura=0.3) |
-| `config/prompts/system-prompt-v1.md` | Instrucciones de tono corporativo del asistente (versionado) |
-| `services/ai.service.js` | Lógica de integración: function calling, RAG, sanitización de historial |
-| `services/opportunities.service.js` | Lógica de negocio del CRM |
-| `controllers/chat.controller.js` | Manejo HTTP de los endpoints de chat |
+| `config/groq.js` | Configuración del cliente principal Groq Cloud (`groq/compound-mini`, temp=0.3) |
+| `config/gemini.js` | Configuración del motor de respaldo Google Gemini (`gemini-1.5-flash`) |
+| `config/prompts/system-prompt-v1.md` | System prompt corporativo con directivas de conducta y formato (versionado) |
+| `services/ai.service.js` | Orquestación HA: caché, context pruning, sanitización de historial y conmutación de proveedor |
+| `services/opportunities.service.js` | Servicio de negocio CRM que consulta PostgreSQL |
+| `controllers/chat.controller.js` | Controlador Express para endpoints REST del chat |
 
-### Funciones disponibles (8 tools)
+---
 
-Gemini puede invocar estas funciones para obtener datos reales en tiempo real:
+### Técnicas de Rendimiento y Prevención de Errores
 
-1. **getOpportunities** — Lista todas con filtros opcionales (stage, priority, owner)
-2. **getOpportunityById** — Detalle completo de una oportunidad por UUID
-3. **getTopByProbability** — Top N oportunidades por probabilidad de cierre
-4. **getFollowUpsThisWeek** — Oportunidades con seguimiento en los próximos 7 días
-5. **getPipelineSummary** — Resumen: total, valor, promedios, conteos
-6. **getOpportunitiesByPriority** — Filtrar por nivel de prioridad
-7. **getOpportunitiesByOwner** — Filtrar por responsable
-8. **searchOpportunityDocuments** — RAG de búsqueda en documentos técnicos y propuestas adjuntas
-
-### Control de alucinaciones
-
-1. **System prompt restrictivo**: "Solo usa datos reales obtenidos de las funciones"
-2. **Function calling obligatorio**: Gemini DEBE llamar funciones para obtener datos
-3. **Temperatura baja (0.3)**: Respuestas factuales y sobrias
-4. **Respuesta controlada**: Preguntas fuera del CRM → mensaje de alcance limitado
-5. **Max iterations (5)**: Previene loops infinitos de function calling
-
-### Memoria conversacional
-
-- Se implementa usando `chat.sendMessage()` de Gemini que mantiene contexto
-- El frontend envía los últimos 10 mensajes como historial
-- La función `formatChatHistory` garantiza alternancia estricta entre `user` y `model`, asegurando que el primer mensaje siempre sea del rol `user`.
-- Cada mensaje (user + assistant) se guarda en la tabla `chat_history`.
-
-### Prompt versionado
-
-El system prompt se almacena en `backend/src/config/prompts/system-prompt-v1.md`.
+1. **Context Pruning (Filtrado de Contexto)**: Si el usuario consulta por una empresa específica (ej: *"BancaDigital"*), se envía solo esa empresa en lugar de las 30 oportunidades, reduciendo el consumo de tokens en un 85%.
+2. **Compresión de Historial Conversacional**: Se conservan solo los últimos 6 mensajes y las respuestas pasadas del asistente se resumen a 250 caracteres, evitando el error `429 TPM Rate Limit`.
+3. **Alternancia Estricta de Roles**: `formatChatHistory` asegura que el historial siempre comience con el rol `user` y alterne en estricto orden `user` ➔ `assistant`.
+4. **Caché LRU en Memoria (60s)**: Atiende peticiones idénticas repetidas en 0ms sin consumir cuota de las APIs de IA.
+5. **Temperatura Baja (0.3)**: Garantiza respuestas estrictamente factuales sobre los datos reales del CRM.

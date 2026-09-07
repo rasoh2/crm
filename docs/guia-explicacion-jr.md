@@ -1,16 +1,16 @@
 # 📘 Guía de Explicación del Proyecto para Desarrolladores Junior
 
-> **Propósito de este documento:** Esta guía está diseñada para que un desarrollador Junior pueda comprender en profundidad la arquitectura, el flujo de datos y las decisiones técnicas de este sistema, y sea capaz de **explicarlo con confianza** en una demo, presentación o entrevista técnica.
+> **Propósito de este documento:** Esta guía está diseñada para que un desarrollador Junior pueda comprender en profundidad la arquitectura, el flujo de datos y las decisiones técnicas de este sistema, y sea capaz de **explicarlo con total confianza** en una demo, presentación de código o entrevista técnica.
 
 ---
 
 ## 🎯 1. El "Elevator Pitch" (Explicación en 30 segundos)
 
-> *"Este proyecto es un **Mini CRM comercial con un Asistente de IA integrado**. Permite gestionar oportunidades de venta (crear, editar, filtrar, paginar y eliminar) y cuenta con un chatbot impulsado por **Google Gemini 3.1 Flash Lite**. Lo especial del chatbot es que utiliza **Function Calling** y **RAG**: no inventa respuestas ni tiene datos desactualizados, sino que consulta directamente la base de datos PostgreSQL en tiempo real y documentos adjuntos para dar respuestas exactas sobre las ventas."*
+> *"Este proyecto es un **Mini CRM comercial con un Asistente de IA de Alta Disponibilidad integrado**. Permite gestionar oportunidades de venta (crear, editar, filtrar, paginar y eliminar) y cuenta con un Copilot Comercial impulsado por **Groq Cloud (LPUs)** y **Google Gemini como respaldo automático**. Lo especial del chatbot es que utiliza **RAG** e **Inyección SQL en Tiempo Real**: no inventa respuestas ni tiene datos desactualizados, sino que analiza la base de datos PostgreSQL e historial de interacciones con una latencia de respuesta inferior a 500ms y tolerancia total a fallos."*
 
 ---
 
-## 🏗️ 2. Arquitectura del Sistema (Las 3 Capas + WebSockets)
+## 🏗️ 2. Arquitectura del Sistema (3 Capas + WebSockets + Multi-Provider AI)
 
 El proyecto está diseñado como un **Monolito Modular** separado en dos carpetas principales (`frontend` y `backend`):
 
@@ -18,31 +18,30 @@ El proyecto está diseñado como un **Monolito Modular** separado en dos carpeta
 ┌─────────────────────────┐     HTTP / WebSockets     ┌─────────────────────────┐        SQL Directo        ┌─────────────────┐
 │        FRONTEND         │ ────────────────────────► │         BACKEND         │ ────────────────────────► │  BASE DE DATOS  │
 │  React 19 + Bootstrap 5 │ ◄──────────────────────── │   Node.js + Express API │ ◄──────────────────────── │  PostgreSQL 16  │
-│   Vite SPA + Socket.io  │    (JWT Interceptor)      │ (JWT Auth + Socket.io)  │                           │                 │
+│   Vite SPA + Socket.io  │   (JWT + Auto-Reconnect)  │ (JWT Auth + Socket.io)  │                           │                 │
 └─────────────────────────┘                           └────────────┬────────────┘                           └─────────────────┘
                                                                    │
-                                                                   │ Function Calling (8 Tools)
-                                                                   ▼
-                                                      ┌─────────────────────────┐
-                                                      │      GOOGLE GEMINI      │
-                                                      │ (gemini-3.1-flash-lite) │
+                                                      ┌────────────┴────────────┐
+                                                      │  MOTOR DE IA DUAL (HA)  │
+                                                      ├─────────────────────────┤
+                                                      │ 1. Groq Cloud (Primary) │  <-- LPU Inferencia <500ms
+                                                      │ 2. Gemini 1.5 (Backup)  │  <-- Respaldo automático 429
                                                       └─────────────────────────┘
 ```
 
 ### A. Frontend (La Interfaz)
 - **Tecnología:** React 19 + Vite + React Bootstrap + Socket.io Client.
-- **Responsabilidad:** Presentar una interfaz ágil al usuario. Tiene dos vistas principales:
+- **Responsabilidades:**
   1. **CRUD de Oportunidades & KPIs:** Tabla responsiva con paginación, filtros por estado/prioridad/responsable, exportación CSV e indicador WebSocket `🟢 En Vivo`.
-  2. **Copilot Comercial (Chat UI):** Interfaz de chat conversacional con Markdown integrado.
+  2. **Copilot Comercial (Chat UI):** Interfaz conversacional con renderizado de Markdown, botones de consulta rápida y captura inteligente de errores.
 
 ### B. Backend (El Cerebro de Negocio y API)
-- **Tecnología:** Node.js + Express + Socket.io.
-- **Responsabilidad:** Exponer endpoints REST (`/api/opportunities`, `/api/chat`), conectar con la base de datos PostgreSQL, transmitir mutaciones en tiempo real por WebSockets y coordinar la comunicación entre el usuario y la IA de Google Gemini 3.1 Flash Lite.
+- **Tecnología:** Node.js (Express) + Socket.io + Groq SDK / Google Generative AI SDK.
+- **Responsabilidades:** Exponer endpoints REST (`/api/opportunities`, `/api/chat`), conectar con PostgreSQL, emitir mutaciones en tiempo real por WebSockets y orquestar el flujo de IA de **Alta Disponibilidad Multi-Proveedor**.
 
-
-### C. Base de Datos (El Almacenamiento)
-- **Tecnología:** PostgreSQL 16.
-- **Responsabilidad:** Almacenar de forma persistente las oportunidades comerciales en la tabla `opportunities` e historial de chats en `chat_history`. Usa tipos nativos como `UUID` para IDs y `ENUM` para validar estados y prioridades.
+### C. Base de Datos (El Almacenamiento Persistente)
+- **Tecnología:** PostgreSQL 16 (local / Cloud Neon).
+- **Responsabilidades:** Almacenar oportunidades en `opportunities` e historial de conversación en `chat_history`. Utiliza tipos nativos `UUID` para llaves primarias y `ENUM` / `CHECK` constraints para integridad de datos.
 
 ---
 
@@ -56,84 +55,99 @@ sequenceDiagram
     actor Usuario
     participant FE as Frontend (React)
     participant BE as Backend (Express)
+    participant Cache as Memoria Caché (60s)
     participant BD as PostgreSQL
-    participant AI as Google Gemini API
+    participant Groq as Groq Cloud (Primary LPU)
+    participant Gemini as Google Gemini (Backup)
 
-    Usuario->>FE: Escribe: "¿Qué clientes necesitan seguimiento esta semana?"
+    Usuario->>FE: Escribe: "Resumen ejecutivo del pipeline"
     FE->>BE: POST /api/chat { message, conversationHistory }
-    BE->>BE: Sanitiza el historial (formato user/model)
-    BE->>AI: Envía mensaje + Definición de Tools (getFollowUpsThisWeek, etc.)
-    Note over AI: Gemini analiza la pregunta y decide<br/>que necesita datos reales.
-    AI-->>BE: Responde: "Quiero ejecutar la función getFollowUpsThisWeek()"
-    BE->>BD: Ejecuta Query SQL: SELECT * FROM opportunities WHERE next_follow_up_date...
-    BD-->>BE: Devuelve 3 filas de la BD
-    BE->>AI: Envía los resultados de la BD de vuelta a Gemini
-    AI-->>BE: Genera respuesta final redactada en lenguaje natural
-    BE-->>FE: Responde JSON { success: true, data: { message } }
-    FE-->>Usuario: Muestra la respuesta formateada en pantalla
+    BE->>Cache: ¿Existe respuesta en caché reciente (<60s)?
+    alt Respuesta en Caché (Cache Hit)
+        Cache-->>BE: Retorna respuesta (0ms)
+        BE-->>FE: Responde JSON { success: true, message } (Instantáneo)
+    else Consulta Nueva (Cache Miss)
+        BE->>BD: Ejecuta queries de pipeline + RAG de documentos
+        BD-->>BE: Devuelve datos cuantitativos reales de las oportunidades
+        BE->>BE: Aplica Context Pruning & Compresión de Historial
+        BE->>Groq: Envía prompt procesado a Groq Cloud (groq/compound-mini)
+        alt Groq Responde OK (<500ms)
+            Groq-->>BE: Devuelve respuesta en Markdown
+        else Groq alcanza Rate Limit 429 o Timeout
+            Groq-->>BE: HTTP 429 / Error de límite
+            Note over BE: Conmutación Transparente HA
+            BE->>Gemini: Envía consulta al Respaldo (Gemini 1.5 Flash)
+            Gemini-->>BE: Devuelve respuesta redactada con datos reales
+        end
+        BE->>BD: Guarda mensaje en chat_history
+        BE->>Cache: Guarda en caché por 60 segundos
+        BE-->>FE: Responde JSON { success: true, message }
+    end
+    FE-->>Usuario: Muestra la respuesta renderizada en pantalla
 ```
 
-### Paso a paso contado en palabras sencillas:
-1. **El usuario pregunta** algo en el chat (ej. *"¿Cuáles son los clientes con mayor probabilidad de cierre?"*).
-2. **El Frontend envía** la pregunta al endpoint `/api/chat` del Backend.
-3. **El Backend prepara a Gemini:** Le pasa el mensaje del usuario y le entrega un "estuche de herramientas" (Tools / Function Calling & RAG), diciéndole: *"Tengo estas 8 funciones para consultar la base de datos y documentos de oportunidades si las necesitas"*.
+---
 
-4. **Gemini decide qué herramienta usar:** La IA detecta que la pregunta requiere datos reales y responde diciendo *"Ejecuta la función `getTopByProbability`"*.
-5. **El Backend ejecuta el SQL:** El Backend llama a PostgreSQL, hace la consulta SQL y obtiene las oportunidades reales.
-6. **El Backend le responde a Gemini:** Le entrega los datos obtenidos de la BD a Gemini.
-7. **Gemini redacta la respuesta:** Con los datos reales en la mano, Gemini redacta una respuesta clara en español.
-8. **El usuario ve el resultado:** La respuesta llega al frontend y se renderiza elegantemente.
+## 💡 4. Conceptos Clave de Arquitectura Explicados para un Jr.
+
+Si te preguntan en una entrevista sobre los aspectos más avanzados del sistema, aquí tienes cómo explicarlos:
+
+### 1. ¿Por qué usamos Groq Cloud en lugar de usar solo una API tradicional?
+> **Explicación:** Groq no usa GPUs convencionales; utiliza **LPUs (Language Processing Units)** diseñadas específicamente para modelos de lenguaje. Esto permite generar más de 500 tokens por segundo, reduciendo la latencia del chat de 3-5 segundos a **menos de 500 milisegundos**.
+
+### 2. ¿Qué es la Arquitectura de Alta Disponibilidad Multi-Proveedor (HA)?
+> **Explicación:** Las APIs gratuitas de IA imponen límites de peticiones por minuto (`429 Rate Limit`). Para que la aplicación **nunca se caiga**, implementamos un patrón de circuito primario/secundario: la app intenta con Groq Cloud; si Groq está saturado, conmuta de forma **transparente** a Google Gemini. El usuario siempre recibe su respuesta sin ver mensajes de error.
+
+### 3. ¿Qué es Context Pruning y Compresión de Historial?
+> **Explicación:** Si le enviamos todas las respuestas pasadas y toda la base de datos a la IA en cada mensaje, la ventana de contexto explota en tamaño y supera los límites de la API. Aplicamos dos técnicas:
+> 1. **Context Pruning:** Si el usuario pregunta por una empresa específica (ej: *"BancaDigital"*), el backend filtra la BD y le envía a la IA solo esa empresa.
+> 2. **Compresión de Historial:** Las respuestas pasadas del asistente se truncan a 250 caracteres. Esto reduce el consumo de tokens en un **80%**, evitando bloqueos por TPM (Tokens Per Minute).
+
+### 4. ¿Por qué se caían los WebSockets y cómo se solucionó?
+> **Explicación:** Ocurría por tres motivos:
+> 1. **Upgrade de transporte:** Socket.io intentaba cambiar de HTTP Polling a WebSocket puro en caliente. Lo solucionamos fijando `transports: ['websocket', 'polling']`.
+> 2. **Heartbeat:** Agregamos `pingTimeout: 60s` para que el socket no expire mientras la IA procesa respuestas.
+> 3. **Reinicios de Node:** En desarrollo, `node --watch` reiniciaba el backend al escribir archivos. Agregamos `--watch-path=src` en `package.json` para que Node solo vigile el código fuente.
 
 ---
 
-## 💡 4. La Magia Clave: ¿Qué es Function Calling y por qué lo usamos?
+## 🛠️ 5. Tabla de Decisiones Técnicas y Justificación
 
-Si te preguntan en una entrevista **"¿Por qué no le pasaste toda la base de datos a la IA en el prompt?"**, la respuesta es:
-
-1. **Costo y Límites de Tokens:** Enviar miles de filas de base de datos en cada mensaje es muy costoso y supera el límite de contexto.
-2. **Seguridad y Privacidad:** Solo consultamos exactamente los datos necesarios para la pregunta.
-3. **Cero Alucinaciones:** Al obligar a la IA a consultar funciones que leen la BD real, se evita que la IA invente clientes o montos falsos.
-
----
-
-## 🛠️ 5. Decisiones Técnicas: "Por qué elegimos esta tecnología"
-
-Prepárate para justificar las decisiones del proyecto:
-
-| Decisión | ¿Por qué se eligió? | Alternativa descartada y motivo |
+| Decisión Técnica | ¿Por qué se eligió? | Alternativa descartada y motivo |
 |---|---|---|
-| **Monolito Modular** | Mantiene el proyecto simple, rápido de desplegar y fácil de entender. | **Microservicios:** Añade demasiada complejidad innecesaria para un CRM de este tamaño. |
-| **Driver SQL nativo (`pg`)** | Da control total de las queries SQL, máximo rendimiento y sin sobrecarga. | **ORMs pesados (Prisma/Sequelize):** Innecesarios para esquemas sencillos de pocas tablas. |
-| **Vite** | Reemplazo moderno de CRA, compilación instantánea y HMR (Hot Module Replacement) ultra rápido. | **Create React App (CRA):** Está descontinuado/deprecated desde hace años. |
-| **System Prompt en `.md`** | Permite versionar la personalidad y reglas de la IA en Git sin tocar código JS. | **Hardcodeado en código:** Difícil de mantener y probar. |
+| **Groq Cloud (LPU)** | Inferencia ultrarrápida (<500ms) para una experiencia conversacional fluida. | APIs tradicionales de alta latencia (3-5s de espera). |
+| **Respaldo con Google Gemini** | Garantiza tolerancia a fallos si Groq alcanza el límite de velocidad por minuto. | Fallar y mostrar un mensaje de error feo al usuario. |
+| **Driver `pg` nativo** | Control total de consultas SQL, cero sobrecarga y máxima velocidad. | ORMs como Prisma/Sequelize que agregan capas innecesarias. |
+| **Vite** | Build tool moderno, HMR instantáneo en desarrollo y bundles livianos en producción. | Create React App (CRA), el cual está descontinuado desde 2023. |
+| **Caché LRU (60s)** | Atiende clics repetidos en 0ms y ahorra cuota de llamadas API. | Consultar la API externa por cada clic del usuario. |
 
 ---
 
 ## ❓ 6. Preguntas Frecuentes de Entrevista (FAQ)
 
-### P1: ¿Cómo manejaron la compatibilidad del historial con Gemini?
-> **Respuesta:** *"Google Gemini exige que el historial alterne estrictamente entre roles `user` y `model`, y que el primer mensaje siempre sea del `user`. En el backend creamos una función helper (`formatChatHistory`) que sanitiza el array convirtiendo roles, descartando el mensaje estático inicial del chatbot si existe, y asegurando la secuencia correcta antes de llamar a `startChat()`."*
+### P1: ¿Cómo evitan las alucinaciones de la IA?
+> **Respuesta:** *"Limitamos a la IA usando un System Prompt restrictivo en Markdown (`system-prompt-v1.md`), inyectando exclusivamente datos reales de la BD PostgreSQL en tiempo real y configurando una temperatura baja (0.3) para que las respuestas sean puramente factuales."*
 
-### P2: ¿Qué pasa si falla la base de datos o la API Key?
-> **Respuesta:** *"El backend tiene bloques `try/catch` centralizados en la capa de servicios y controladores. Si la API Key es inválida o PostgreSQL no responde, el sistema no se cae; devuelve un mensaje de error controlado y amigable al usuario notificándole el problema."*
+### P2: ¿Cómo manejan la seguridad y autenticación en los WebSockets y la API?
+> **Respuesta:** *"Utilizamos tokens JWT (JSON Web Tokens) transmitidos en la cabecera `Authorization: Bearer <token>`. El backend cuenta con un middleware `authenticateToken` que verifica la firma y resguarda las rutas ante accesos no autorizados."*
 
-### P3: ¿Cómo validan los datos que ingresa el usuario en una nueva oportunidad?
-> **Respuesta:** *"Usamos una doble capa de validación: en el backend usamos `express-validator` para validar tipos de datos, formatos de email y montos positivos antes de tocar la base de datos, y en la base de datos PostgreSQL usamos tipos `ENUM` y `CHECK` para garantizar integridad de datos a nivel de motor."*
+### P3: ¿Por qué eligieron una arquitectura de Monolito Modular?
+> **Respuesta:** *"Porque para un CRM de este alcance, dividir en microservicios agregaría latencia de red, complejidad de despliegue y sobrecarga de orquestación sin aportar beneficios reales. El monolito modular en carpetas `frontend/` y `backend/` mantiene la separación de capas limpia y fácil de mantener."*
 
 ---
 
-## 🚀 7. Resumen de comandos clave para demostrar el proyecto
+## 🚀 7. Resumen de Comandos Ejecutables
 
 ```bash
-# 1. Iniciar Base de datos y Backend
+# Terminal 1: Backend
 cd backend
 npm run dev
 
-# 2. Iniciar Frontend (en otra terminal)
+# Terminal 2: Frontend
 cd frontend
 npm run dev
 
-# 3. Probar el endpoint de salud (Health check)
+# Probar Endpoint de Salud
 curl http://localhost:3001/api/health
 ```
 

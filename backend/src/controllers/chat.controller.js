@@ -11,17 +11,17 @@ const ChatController = {
 
       // Convertir historial del frontend al formato esperado
       const conversationHistory = (history || []).map((msg) => ({
-        role: msg.role === 'user' ? 'user' : 'model',
+        role: msg.role === 'user' ? 'user' : 'assistant',
         content: msg.content,
       }));
 
       const result = await AIService.processMessage(message, conversationHistory);
 
       res.json({
-        success: true,
+        success: !result.error,
         data: {
           message: result.response,
-          timestamp: result.timestamp,
+          timestamp: result.timestamp || new Date().toISOString(),
         },
       });
     } catch (error) {

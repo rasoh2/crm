@@ -21,12 +21,12 @@ const apiLimiter = rateLimit({
  */
 const chatRateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutos
-  max: 20,
+  max: process.env.NODE_ENV === 'production' ? 50 : 200,
   standardHeaders: true,
   legacyHeaders: false,
   message: {
     success: false,
-    error: 'Límite de consultas al Asistente de IA alcanzado (máximo 20 consultas / 15 min). Por favor espera unos minutos.',
+    error: 'Límite de consultas al Asistente de IA alcanzado (máximo de consultas por 15 min). Por favor espera unos minutos.',
   },
 });
 

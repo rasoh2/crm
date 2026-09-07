@@ -135,7 +135,7 @@ export default function AIChatBox() {
       <Row className="g-3">
         {/* Columna Principal: Área de Chat e Input */}
         <Col lg={8} xl={9}>
-          <Card className="shadow-sm border-0" style={{ height: '76vh' }}>
+          <Card className="shadow-sm border-0 chat-card-container" style={{ minHeight: '65vh', height: '76vh' }}>
             {/* Mensajes del Chat */}
             <Card.Body className="overflow-auto bg-light bg-opacity-50 p-4" style={{ flex: 1 }}>
               {messages.map((msg, idx) => (
@@ -155,9 +155,9 @@ export default function AIChatBox() {
                   >
                     <div className="d-flex align-items-center mb-1">
                       {msg.role === 'user' ? (
-                        <BsPerson className="me-1.5 opacity-75" />
+                        <BsPerson className="me-2 opacity-75" />
                       ) : (
-                        <BsStars className="me-1.5 text-warning" />
+                        <BsStars className="me-2 text-warning" />
                       )}
                       <small className={`fw-bold ${msg.role === 'user' ? 'text-white-50' : 'text-secondary'}`}>
                         {msg.role === 'user' ? 'Usuario' : 'Copilot Comercial'}
@@ -215,13 +215,13 @@ export default function AIChatBox() {
                 <small className="text-uppercase fw-bold text-muted d-block mb-2 fs-8">
                   📌 Plantillas (Rellena [Empresa]):
                 </small>
-                <div className="d-grid gap-1.5">
+                <div className="d-grid gap-2">
                   {templateQuestions.map((q, idx) => (
                     <Button
                       key={idx}
                       variant="outline-secondary"
                       size="sm"
-                      className="text-start text-truncate rounded-3 py-1.5 px-2.5"
+                      className="text-start text-truncate rounded-3 py-1 px-2"
                       style={{ fontSize: '0.8rem' }}
                       disabled={loading}
                       onClick={() => handleSelectTemplate(q)}
@@ -241,13 +241,13 @@ export default function AIChatBox() {
                 {loadingCompanies ? (
                   <small className="text-muted">Cargando empresas...</small>
                 ) : (
-                  <div className="d-flex flex-wrap gap-1.5 overflow-auto pe-1" style={{ maxHeight: '180px' }}>
+                  <div className="d-flex flex-wrap gap-1 overflow-auto pe-1" style={{ maxHeight: '180px' }}>
                     {companies.map((compName, idx) => (
                       <Badge
                         key={idx}
                         bg="light"
                         text="dark"
-                        className="border text-truncate px-2 py-1.5 shadow-2xs hover-shadow"
+                        className="border text-truncate px-2 py-1 shadow-2xs hover-shadow"
                         style={{ cursor: 'pointer', fontSize: '0.76rem', maxWidth: '100%' }}
                         onClick={() => handleSelectCompany(compName)}
                         title={`Haz clic para reemplazar [Empresa] con "${compName}"`}
@@ -264,13 +264,13 @@ export default function AIChatBox() {
                 <small className="text-uppercase fw-bold text-muted d-block mb-2 fs-8">
                   <BsLightningCharge className="me-1 text-warning" /> Consultas Rápidas Directas:
                 </small>
-                <div className="d-grid gap-1.5">
+                <div className="d-grid gap-2">
                   {quickQueries.map((q, idx) => (
                     <Button
                       key={idx}
                       variant="outline-primary"
                       size="sm"
-                      className="text-start text-truncate rounded-3 py-1.5 px-2.5"
+                      className="text-start text-truncate rounded-3 py-1 px-2"
                       style={{ fontSize: '0.78rem' }}
                       disabled={loading}
                       onClick={() => handleSelectTemplate(q)}

@@ -15,36 +15,36 @@ export default function CurrencyTicker({ rates, loading }) {
   const formatUSD = (val) => `$${Math.round(val).toLocaleString('en-US')}`;
 
   return (
-    <div className="bg-dark text-white p-2 px-3 rounded-3 mb-3 d-flex flex-wrap align-items-center justify-content-between shadow-sm fs-7">
-      <div className="d-flex align-items-center gap-1 me-2">
+    <div className="bg-dark text-white p-2 px-3 rounded-3 mb-3 d-flex flex-column flex-sm-row align-items-start align-items-sm-center justify-content-between shadow-sm fs-7 gap-2">
+      <div className="d-flex align-items-center gap-1">
         <BsArrowUpRight className="text-success me-1" />
-        <span className="fw-bold text-light tracking-tight">MERCADOS EN VIVO</span>
+        <span className="fw-bold text-light tracking-tight text-nowrap">MERCADOS EN VIVO</span>
       </div>
 
-      <div className="d-flex flex-wrap align-items-center gap-2">
-        <Badge bg="secondary" className="bg-opacity-25 border border-secondary text-light px-2.5 py-1.5 font-monospace">
+      <div className="d-flex flex-wrap align-items-center gap-2 currency-ticker-badges">
+        <Badge bg="secondary" className="bg-opacity-25 border border-secondary text-light px-2 py-1 font-monospace d-flex align-items-center">
           <BsCurrencyDollar className="text-success me-1" />
-          USD/CLP: <strong className="text-white ms-1">{formatCLP(rates.USD_CLP)}</strong>
+          <span>USD/CLP: <strong className="text-white ms-1">{formatCLP(rates.USD_CLP)}</strong></span>
         </Badge>
 
-        <Badge bg="secondary" className="bg-opacity-25 border border-secondary text-light px-2.5 py-1.5 font-monospace">
+        <Badge bg="secondary" className="bg-opacity-25 border border-secondary text-light px-2 py-1 font-monospace d-flex align-items-center">
           <BsCurrencyEuro className="text-info me-1" />
-          EUR/CLP: <strong className="text-white ms-1">{formatCLP(rates.EUR_CLP)}</strong>
+          <span>EUR/CLP: <strong className="text-white ms-1">{formatCLP(rates.EUR_CLP)}</strong></span>
         </Badge>
 
-        <Badge bg="secondary" className="bg-opacity-25 border border-secondary text-light px-2.5 py-1.5 font-monospace">
+        <Badge bg="secondary" className="bg-opacity-25 border border-secondary text-light px-2 py-1 font-monospace d-flex align-items-center">
           <span className="text-warning fw-bold me-1">UF</span>
-          UF: <strong className="text-white ms-1">{formatCLP(rates.UF_CLP)}</strong>
+          <span>UF: <strong className="text-white ms-1">{formatCLP(rates.UF_CLP)}</strong></span>
         </Badge>
 
-        <Badge bg="secondary" className="bg-opacity-25 border border-secondary text-light px-2.5 py-1.5 font-monospace">
+        <Badge bg="secondary" className="bg-opacity-25 border border-secondary text-light px-2 py-1 font-monospace d-flex align-items-center">
           <BsCurrencyBitcoin className="text-warning me-1" />
-          BTC/USD: <strong className="text-white ms-1">{formatUSD(rates.BTC_USD)}</strong>
+          <span>BTC/USD: <strong className="text-white ms-1">{formatUSD(rates.BTC_USD)}</strong></span>
         </Badge>
 
-        <Badge bg="secondary" className="bg-opacity-25 border border-secondary text-light px-2.5 py-1.5 font-monospace">
+        <Badge bg="secondary" className="bg-opacity-25 border border-secondary text-light px-2 py-1 font-monospace d-flex align-items-center">
           <span className="text-primary me-1 fw-bold">Ξ</span>
-          ETH/USD: <strong className="text-white ms-1">{formatUSD(rates.ETH_USD)}</strong>
+          <span>ETH/USD: <strong className="text-white ms-1">{formatUSD(rates.ETH_USD)}</strong></span>
         </Badge>
       </div>
 

@@ -32,17 +32,17 @@ export default function Navbar() {
   return (
     <BsNavbar bg="dark" variant="dark" expand="lg" sticky="top" className="shadow-sm">
       <Container>
-        <BsNavbar.Brand as={Link} to="/" className="fw-bold tracking-tight d-flex align-items-center">
-          <BsBriefcase className="me-2 text-primary" />
-          <span>CRM Comercial</span>
+        <BsNavbar.Brand as={Link} to="/" className="fw-bold tracking-tight d-flex align-items-center me-auto me-lg-3 fs-6 fs-sm-5">
+          <BsBriefcase className="me-2 text-primary flex-shrink-0" />
+          <span className="text-nowrap">CRM Comercial</span>
           <Badge
             bg={isConnected ? 'success' : 'secondary'}
-            className="ms-2 font-monospace fw-normal text-uppercase d-flex align-items-center opacity-75"
-            style={{ fontSize: '0.65rem', padding: '0.3em 0.5em' }}
+            className="ms-2 font-monospace fw-normal text-uppercase d-flex align-items-center opacity-75 flex-shrink-0"
+            style={{ fontSize: '0.65rem', padding: '0.25em 0.45em' }}
             title={isConnected ? 'WebSocket Conectado en Tiempo Real' : 'Conectando WebSocket...'}
           >
             <BsBroadcast className="me-1" />
-            {isConnected ? 'En Vivo' : 'Offline'}
+            <span className="d-none d-xs-inline">{isConnected ? 'En Vivo' : 'Offline'}</span>
           </Badge>
         </BsNavbar.Brand>
         <BsNavbar.Toggle />
@@ -77,7 +77,7 @@ export default function Navbar() {
               active={location.pathname === '/chat'}
               className="d-flex align-items-center"
             >
-              <BsStars className="me-1.5 text-warning" />
+              <BsStars className="me-2 text-warning" />
               Copilot Comercial
             </Nav.Link>
           </Nav>

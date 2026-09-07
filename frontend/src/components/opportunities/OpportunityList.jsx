@@ -87,9 +87,9 @@ export default function OpportunityList() {
 
   return (
     <>
-      <div className="d-flex justify-content-between align-items-center mb-3">
-        <h2 className="fw-bold tracking-tight">📋 Oportunidades Comerciales</h2>
-        <div className="d-flex gap-2">
+      <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-2 mb-3">
+        <h2 className="fw-bold tracking-tight mb-0 fs-3">📋 Oportunidades Comerciales</h2>
+        <div className="d-flex gap-2 mobile-header-actions">
           <Button
             variant="outline-secondary"
             onClick={() => setShowDashboard(!showDashboard)}

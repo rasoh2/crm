@@ -225,17 +225,17 @@ export default function PipelineDashboard({ opportunities: initialOpps = null })
       <CurrencyTicker rates={rates} loading={ratesLoading} />
 
       {/* Selector de Moneda de Visualización */}
-      <div className="d-flex justify-content-between align-items-center mb-3 bg-light p-2 px-3 rounded-3 border">
-        <span className="fw-semibold text-secondary fs-7">
+      <div className="d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center gap-2 mb-3 bg-light p-2 px-3 rounded-3 border">
+        <span className="fw-semibold text-secondary fs-7 text-nowrap">
           💱 Convertidor de Moneda del Pipeline:
         </span>
-        <ButtonGroup size="sm">
+        <ButtonGroup size="sm" className="w-100 w-sm-auto">
           {['USD', 'CLP', 'EUR', 'UF', 'BTC'].map((curr) => (
             <Button
               key={curr}
               variant={displayCurrency === curr ? 'primary' : 'outline-secondary'}
               onClick={() => setDisplayCurrency(curr)}
-              className="fw-bold px-2.5 py-1"
+              className="fw-bold px-2 py-1 flex-fill flex-sm-grow-0"
             >
               {curr}
             </Button>

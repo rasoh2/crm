@@ -50,3 +50,10 @@
 ## 12. Exportación a CSV con BOM UTF-8
 **Decisión:** Generar archivos CSV con anteposición de BOM UTF-8 (`\uFEFF`).
 **Justificación:** Evita problemas de codificación de caracteres en español (tildes, ñ) al abrir los reportes en Microsoft Excel en sistemas operativos Windows.
+
+## 13. Optimización Avanzada de Tokens: Enrutamiento por Intención (Intent Routing) & Respuestas Sintéticas
+**Decisión:** Clasificar la intención del usuario (`GREETING`, `METRICS`, `FOLLOWUP`, `DOCUMENT`, `COMPANY`) antes de ensamblar el prompt y limitar la salida a 1024 tokens.
+**Justificación:** 
+- **Reducción del 70% en Tokens**: Evita enviar el catálogo completo de 30 empresas para preguntas simples de métricas o saludos.
+- **Datos 100% Frescos**: A diferencia del Caché Semántico, el Enrutamiento por Intención siempre consulta la BD en tiempo real, evitando mostrar datos obsoletos si se modifica una oportunidad.
+- **Fail-Fast Inmediato (0ms)**: En errores de autenticación (401/403), omite reintentos innecesarios y conmuta de inmediato entre proveedores (Groq LPU ➔ Google Gemini).

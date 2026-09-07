@@ -160,14 +160,16 @@ async function processMessage(userMessage, conversationHistory = []) {
       return cached;
     }
 
-    // 1. Cargar contexto en tiempo real del CRM con Pruning Inteligente & Token Optimization
-    let crmContextText = '';
+    // 1. Clasificador de Intenciones (Intent Router) para Context Routing (<1ms)
     const queryLower = userMessage.toLowerCase().trim();
     const isGreeting = /^(hola|buenas|buenos días|buenas tardes|buenas noches|saludos|gracias|ayuda|qué puedes hacer)\b/i.test(queryLower) && queryLower.length < 35;
+    const isMetricsOnly = /(resumen|total|métricas|métrico|cuánto|monto|acumulado|valor total|promedio|ganadas|activas|críticas|pipeline general)/i.test(queryLower) && !queryLower.includes('empresa') && !queryLower.includes('cliente');
+    const isFollowupOnly = /(seguimiento|llamar|agenda|hoy|próximo|tarea|contacto|pendiente)/i.test(queryLower);
+    const isDocOnly = /(propuesta|documento|contrato|archivo|pdf|minuta|requerimiento)/i.test(queryLower);
 
     if (isGreeting) {
-      // Token Optimization: Saludos simples usan un contexto ultra-ligero (~100 tokens)
-      crmContextText = `=== CONTEXTO RÁPIDO CRM ===\nEl sistema cuenta con un pipeline activo de oportunidades comerciales. Saluda de forma ejecutiva y breve.`;
+      // Intent 1: GREETING (~20 tokens)
+      crmContextText = `=== CONTEXTO RÁPIDO ===\nEl sistema es un CRM comercial activo. Saluda de forma ejecutiva, breve y cordial.`;
     } else {
       try {
         const [opps, summary] = await Promise.all([
@@ -175,40 +177,60 @@ async function processMessage(userMessage, conversationHistory = []) {
           OpportunityService.getPipelineSummary(),
         ]);
 
-        const docResults = searchDocuments(userMessage, '');
-
-        // Context Pruning: si la pregunta es sobre una empresa específica, filtrar la lista
-        const matchedOpps = opps.filter(
-          (o) =>
-            queryLower.includes(o.company_name.toLowerCase()) ||
-            queryLower.includes(o.opportunity_name.toLowerCase()) ||
-            queryLower.includes(o.owner.toLowerCase())
-        );
-
-        const targetOpps = matchedOpps.length > 0 ? matchedOpps : opps;
-
-        // Formateo TSV Compacto (Ahorra ~45% de tokens por oportunidad)
-        const oppLines = targetOpps
-          .map(
+        if (isMetricsOnly) {
+          // Intent 2: METRICS (~40 tokens) - No envía listado individual de 30 empresas
+          crmContextText = `
+=== RESUMEN DE MÉTRICAS DEL PIPELINE ===
+Oportunidades Totales: ${summary.total_opportunities} | Valor Acumulado: $${summary.total_value} USD | Prob. Promedio: ${Math.round(summary.avg_probability || 0)}%
+Estado Oportunidades: Ganadas=${summary.won}, Activas=${summary.active}, Críticas=${summary.critical_count}
+======================================
+`;
+        } else if (isFollowupOnly) {
+          // Intent 3: FOLLOWUP (~100 tokens) - Envía solo compromisos con fecha de seguimiento
+          const followupOpps = opps.filter((o) => o.next_follow_up_date);
+          const lines = followupOpps.map((o) => `${o.company_name} | ${o.opportunity_name} | Seg: ${o.next_follow_up_date} | Owner: ${o.owner}`).join('\n');
+          crmContextText = `
+=== AGENDA DE SEGUIMIENTOS Y COMPROMISOS ===
+${lines || 'Sin compromisos de seguimiento agendados.'}
+===========================================
+`;
+        } else if (isDocOnly) {
+          // Intent 4: RAG DOCUMENT - Envía solo coincidencias de documentos
+          const docResults = searchDocuments(userMessage, '');
+          const ragText = Array.isArray(docResults) && docResults.length > 0
+            ? docResults.map(d => `- ${d.title || d.name}: ${d.content || d.snippet}`).join('\n')
+            : 'Sin documentos adjuntos coincidentes.';
+          crmContextText = `
+=== DOCUMENTOS Y ARCHIVOS DE SOPORTE ===
+${ragText}
+=======================================
+`;
+        } else {
+          // Intent 5: COMPANY / GENERAL - Context Pruning por empresa o catálogo TSV compacto
+          const matchedOpps = opps.filter(
             (o) =>
-              `${o.company_name} | ${o.opportunity_name} | $${o.estimated_value} ${o.currency} | ${o.stage} | Prio: ${o.priority} | ${o.probability}% | ${o.owner}`
-          )
-          .join('\n');
+              queryLower.includes(o.company_name.toLowerCase()) ||
+              queryLower.includes(o.opportunity_name.toLowerCase()) ||
+              queryLower.includes(o.owner.toLowerCase())
+          );
 
-        let ragText = '';
-        if (Array.isArray(docResults) && docResults.length > 0) {
-          ragText = `\nRAG Documentos:\n` + docResults.map(d => `- ${d.title || d.name}: ${d.content || d.snippet}`).join('\n');
-        }
+          const targetOpps = matchedOpps.length > 0 ? matchedOpps : opps;
+          const oppLines = targetOpps
+            .map(
+              (o) =>
+                `${o.company_name} | ${o.opportunity_name} | $${o.estimated_value} ${o.currency} | ${o.stage} | Prio:${o.priority} | ${o.probability}% | ${o.owner}`
+            )
+            .join('\n');
 
-        crmContextText = `
-=== DATOS DEL PIPELINE (COMPACTO) ===
-Resumen: Total=${summary.total_opportunities}, Valor=$${summary.total_value}USD, ProbProm=${Math.round(summary.avg_probability || 0)}%, Ganadas=${summary.won}, Activas=${summary.active}, Criticas=${summary.critical_count}
-Oportunidades (${targetOpps.length}):
-${oppLines}${ragText}
+          crmContextText = `
+=== DATOS DEL PIPELINE (${targetOpps.length} Oportunidades) ===
+Resumen: Total=${summary.total_opportunities}, Valor=$${summary.total_value}USD, Ganadas=${summary.won}, Activas=${summary.active}
+${oppLines}
 =====================================
 `;
+        }
       } catch (dbErr) {
-        console.warn('⚠️ No se pudo cargar todo el contexto en tiempo real:', dbErr.message);
+        console.warn('⚠️ No se pudo cargar el contexto por intención:', dbErr.message);
       }
     }
 

@@ -1,4 +1,5 @@
 require('dotenv').config();
+// Reload env trigger
 const http = require('http');
 const app = require('./src/app');
 const { ensureDatabase } = require('./src/config/db');

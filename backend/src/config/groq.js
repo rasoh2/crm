@@ -11,8 +11,8 @@ const groq = new Groq({
 });
 
 const groqConfig = {
-  model: process.env.GROQ_MODEL || 'groq/compound-mini',
-  fallbackModel: 'groq/compound',
+  model: process.env.GROQ_MODEL || 'llama-3.1-8b-instant',
+  fallbackModel: 'llama-3.3-70b-versatile',
   generationConfig: {
     temperature: 0.3,
     top_p: 0.8,

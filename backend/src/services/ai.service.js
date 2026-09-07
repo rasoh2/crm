@@ -107,9 +107,10 @@ async function sendGroqCompletionWithRetry(messages, modelName, maxRetries = 2) 
         max_tokens: groqConfig.generationConfig.max_tokens,
       });
     } catch (err) {
-      if (i === maxRetries - 1) throw err;
+      const isAuthErr = err.status === 401 || err.message?.includes('401') || err.message?.includes('invalid_api_key');
+      if (isAuthErr || i === maxRetries - 1) throw err;
       const isRateLimit = err.status === 429 || err.message?.includes('429') || err.message?.includes('Rate limit');
-      const delay = isRateLimit ? 2000 * (i + 1) : 1000;
+      const delay = isRateLimit ? 1000 * (i + 1) : 500;
       console.warn(`⚠️ Reintento (${i + 1}/${maxRetries}) en Groq API (${modelName}): espere ${delay}ms`);
       await new Promise((r) => setTimeout(r, delay));
     }
@@ -216,6 +217,8 @@ RAG Documentos: ${JSON.stringify(docResults)}
       try {
         completion = await sendGroqCompletionWithRetry(messages, groqConfig.model);
       } catch (errPrimary) {
+        const isAuthErr = errPrimary.status === 401 || errPrimary.message?.includes('401') || errPrimary.message?.includes('invalid_api_key');
+        if (isAuthErr) throw errPrimary;
         console.warn(`⚠️ Modelo Groq primario (${groqConfig.model}) ocupado/sin respuesta. Probando fallback Groq (${groqConfig.fallbackModel})...`);
         completion = await sendGroqCompletionWithRetry(messages, groqConfig.fallbackModel);
       }

@@ -9,8 +9,8 @@ require('dotenv').config();
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 
 const geminiConfig = {
-  model: process.env.GEMINI_MODEL || 'gemini-3.6-flash',
-  fallbackModel: 'gemini-1.5-flash',
+  model: process.env.GEMINI_MODEL || 'gemini-1.5-flash',
+  fallbackModel: 'gemini-1.5-pro',
   generationConfig: {
     temperature: 0.3,
     topP: 0.8,

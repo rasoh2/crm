@@ -16,7 +16,7 @@ const groqConfig = {
   generationConfig: {
     temperature: 0.3,
     top_p: 0.8,
-    max_tokens: 2048,
+    max_tokens: 1024,
   },
 };
 

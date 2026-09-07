@@ -160,44 +160,56 @@ async function processMessage(userMessage, conversationHistory = []) {
       return cached;
     }
 
-    // 1. Cargar contexto en tiempo real del CRM con Pruning Inteligente
+    // 1. Cargar contexto en tiempo real del CRM con Pruning Inteligente & Token Optimization
     let crmContextText = '';
-    try {
-      const [opps, summary] = await Promise.all([
-        OpportunityService.getAll({}),
-        OpportunityService.getPipelineSummary(),
-      ]);
+    const queryLower = userMessage.toLowerCase().trim();
+    const isGreeting = /^(hola|buenas|buenos días|buenas tardes|buenas noches|saludos|gracias|ayuda|qué puedes hacer)\b/i.test(queryLower) && queryLower.length < 35;
 
-      const docResults = searchDocuments(userMessage, '');
+    if (isGreeting) {
+      // Token Optimization: Saludos simples usan un contexto ultra-ligero (~100 tokens)
+      crmContextText = `=== CONTEXTO RÁPIDO CRM ===\nEl sistema cuenta con un pipeline activo de oportunidades comerciales. Saluda de forma ejecutiva y breve.`;
+    } else {
+      try {
+        const [opps, summary] = await Promise.all([
+          OpportunityService.getAll({}),
+          OpportunityService.getPipelineSummary(),
+        ]);
 
-      // Context Pruning: si la pregunta es sobre una empresa específica, filtrar la lista
-      const queryLower = userMessage.toLowerCase();
-      const matchedOpps = opps.filter(
-        (o) =>
-          queryLower.includes(o.company_name.toLowerCase()) ||
-          queryLower.includes(o.opportunity_name.toLowerCase()) ||
-          queryLower.includes(o.owner.toLowerCase())
-      );
+        const docResults = searchDocuments(userMessage, '');
 
-      const targetOpps = matchedOpps.length > 0 ? matchedOpps : opps;
-
-      const oppLines = targetOpps
-        .map(
+        // Context Pruning: si la pregunta es sobre una empresa específica, filtrar la lista
+        const matchedOpps = opps.filter(
           (o) =>
-            `- ${o.company_name} | ${o.opportunity_name} | $${o.estimated_value} ${o.currency} | Etapa: ${o.stage} | Prio: ${o.priority} | Prob: ${o.probability}% | Owner: ${o.owner}${o.next_follow_up_date ? ' | Seg: ' + o.next_follow_up_date : ''}`
-        )
-        .join('\n');
+            queryLower.includes(o.company_name.toLowerCase()) ||
+            queryLower.includes(o.opportunity_name.toLowerCase()) ||
+            queryLower.includes(o.owner.toLowerCase())
+        );
 
-      crmContextText = `
-=== DATOS DEL PIPELINE COMERCIAL (REALTIME) ===
-Resumen General: Total=${summary.total_opportunities}, ValorTotal=$${summary.total_value}USD, ProbProm=${Math.round(summary.avg_probability || 0)}%, Ganadas=${summary.won}, Activas=${summary.active}, Criticas=${summary.critical_count}
+        const targetOpps = matchedOpps.length > 0 ? matchedOpps : opps;
+
+        // Formateo TSV Compacto (Ahorra ~45% de tokens por oportunidad)
+        const oppLines = targetOpps
+          .map(
+            (o) =>
+              `${o.company_name} | ${o.opportunity_name} | $${o.estimated_value} ${o.currency} | ${o.stage} | Prio: ${o.priority} | ${o.probability}% | ${o.owner}`
+          )
+          .join('\n');
+
+        let ragText = '';
+        if (Array.isArray(docResults) && docResults.length > 0) {
+          ragText = `\nRAG Documentos:\n` + docResults.map(d => `- ${d.title || d.name}: ${d.content || d.snippet}`).join('\n');
+        }
+
+        crmContextText = `
+=== DATOS DEL PIPELINE (COMPACTO) ===
+Resumen: Total=${summary.total_opportunities}, Valor=$${summary.total_value}USD, ProbProm=${Math.round(summary.avg_probability || 0)}%, Ganadas=${summary.won}, Activas=${summary.active}, Criticas=${summary.critical_count}
 Oportunidades (${targetOpps.length}):
-${oppLines}
-RAG Documentos: ${JSON.stringify(docResults)}
-================================================
+${oppLines}${ragText}
+=====================================
 `;
-    } catch (dbErr) {
-      console.warn('⚠️ No se pudo cargar todo el contexto en tiempo real:', dbErr.message);
+      } catch (dbErr) {
+        console.warn('⚠️ No se pudo cargar todo el contexto en tiempo real:', dbErr.message);
+      }
     }
 
     const formattedHistory = formatChatHistory(conversationHistory);
@@ -229,7 +241,7 @@ RAG Documentos: ${JSON.stringify(docResults)}
       try {
         responseText = await processMessageWithGeminiBackup(userMessage, crmContextText, conversationHistory);
       } catch (geminiErr) {
-        throw new Error(`Ambos proveedores de IA (Groq + Gemini) están en cuota máxima. Detalle: ${geminiErr.message}`);
+        throw new Error('Las API Keys de los proveedores (Groq / Gemini) requieren ser actualizadas o alcanzaron su límite de cuotas.');
       }
     }
 
@@ -245,10 +257,10 @@ RAG Documentos: ${JSON.stringify(docResults)}
 
     return resultPayload;
   } catch (error) {
-    console.error('❌ Error final en AI Service:', error);
+    console.error('❌ Error final en AI Service:', error.message);
 
     return {
-      response: `Disculpas, los servicios de IA están experimentando alta demanda. Por favor intenta tu consulta en unos segundos. (Detalle: ${error.message})`,
+      response: `⚠️ **Servicio de Copilot IA no disponible temporalmente**\n\nLas claves de API de los proveedores de IA (Groq Cloud / Google Gemini) están alcanzando su límite de cuotas o no están configuradas correctamente en el archivo \`.env\`.\n\n*Por favor, actualiza la variable \`GROQ_API_KEY\` o \`GEMINI_API_KEY\` para reanudar el asistente.*`,
       error: true,
     };
   }

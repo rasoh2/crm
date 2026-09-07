@@ -14,7 +14,7 @@ const geminiConfig = {
   generationConfig: {
     temperature: 0.3,
     topP: 0.8,
-    maxOutputTokens: 2048,
+    maxOutputTokens: 1024,
   },
 };
 

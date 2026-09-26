@@ -53,10 +53,13 @@ export default function Navbar() {
     };
   }, []);
 
+  const navigate = useNavigate();
+
   const handleLogout = () => {
     localStorage.removeItem('crm_token');
     localStorage.removeItem('crm_user');
     setCurrentUser(null);
+    navigate('/login');
   };
 
   return (

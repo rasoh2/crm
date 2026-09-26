@@ -12,48 +12,23 @@ const api = axios.create({
   headers: { 'Content-Type': 'application/json' },
 });
 
-// Interceptor para adjuntar automaticamente el token JWT de sesion
-let authToken = localStorage.getItem('crm_token');
-
-api.interceptors.request.use(async (config) => {
-  if (!authToken && !config.url.includes('/auth/demo-token')) {
-    try {
-      const res = await axios.post(`${API_URL}/auth/demo-token`, {});
-      if (res.data?.data?.token) {
-        authToken = res.data.data.token;
-        localStorage.setItem('crm_token', authToken);
-      }
-    } catch (err) {
-      console.warn('⚠️ No se pudo obtener token JWT automatico:', err.message);
-    }
-  }
-
-  if (authToken) {
-    config.headers['Authorization'] = `Bearer ${authToken}`;
+// Interceptor para adjuntar automáticamente el token JWT de sesión
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem('crm_token');
+  if (token) {
+    config.headers['Authorization'] = `Bearer ${token}`;
   }
   return config;
 });
 
-// Interceptor de respuesta para recuperar automaticamente ante tokens 401/403 viejos o expirados
+// Interceptor de respuesta para redirigir al login si el token expira o es inválido (401/403)
 api.interceptors.response.use(
   (response) => response,
-  async (error) => {
-    const originalRequest = error.config;
-    if ((error.response?.status === 401 || error.response?.status === 403) && !originalRequest._retry) {
-      originalRequest._retry = true;
+  (error) => {
+    if ((error.response?.status === 401 || error.response?.status === 403) && window.location.pathname !== '/login') {
       localStorage.removeItem('crm_token');
-      authToken = null;
-      try {
-        const res = await axios.post(`${API_URL}/auth/demo-token`, {});
-        if (res.data?.data?.token) {
-          authToken = res.data.data.token;
-          localStorage.setItem('crm_token', authToken);
-          originalRequest.headers['Authorization'] = `Bearer ${authToken}`;
-          return api(originalRequest);
-        }
-      } catch (err) {
-        console.error('Error al renovar token demo:', err);
-      }
+      localStorage.removeItem('crm_user');
+      window.location.href = '/login';
     }
     return Promise.reject(error);
   }

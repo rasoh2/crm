@@ -3,6 +3,29 @@ import { Card, Form, Button, Spinner, Badge, Row, Col } from 'react-bootstrap';
 import { BsSend, BsStars, BsPerson, BsBuilding, BsChatText, BsLightningCharge } from 'react-icons/bs';
 import { chatApi, opportunityApi } from '../../services/api';
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+
+function preprocessMarkdown(content) {
+  if (typeof content !== 'string') return '';
+  let text = content;
+
+  // 1. Convertir '||' o '|  |' pegados en saltos de línea con '|'
+  text = text.replace(/\|[ \t]*\|/g, '|\n|');
+
+  // 2. Reparar saltos de línea accidentales dentro de celdas sin cerrar con '|'
+  text = text.replace(/([^|\n])\n[ \t]*\|/g, '$1 |');
+
+  // 3. Garantizar que cada fila numerada de tabla (ej: "| 1 |", "| 2 |") comience en una nueva línea
+  text = text.replace(/([^\n])\s*(\|\s*\d+\s*\|)/g, '$1\n$2');
+
+  // 4. Garantizar que el encabezado separador "|---|..." tenga un salto de línea antes de la primera fila
+  text = text.replace(/(\|-+[-| \t]*)\s*\|(?=\s*\d+\s*\|)/g, '$1\n|');
+
+  // 5. Normalizar saltos de línea múltiples
+  text = text.replace(/\n{3,}/g, '\n\n');
+
+  return text.trim();
+}
 
 export default function AIChatBox() {
   const [messages, setMessages] = useState([
@@ -165,7 +188,9 @@ export default function AIChatBox() {
                     </div>
                     <div className="chat-content" style={{ fontSize: '0.95rem' }}>
                       {msg.role === 'assistant' ? (
-                        <ReactMarkdown>{msg.content}</ReactMarkdown>
+                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                          {preprocessMarkdown(msg.content)}
+                        </ReactMarkdown>
                       ) : (
                         msg.content
                       )}

@@ -98,4 +98,12 @@ export const auditApi = {
   getOpportunityLogs: (id, limit = 50) => api.get(`/audit-logs/opportunity/${id}?limit=${limit}`),
 };
 
+// ========================================
+// Autenticación
+// ========================================
+export const authApi = {
+  login: (credentials) => api.post('/auth/login', credentials),
+  getProfile: () => api.get('/auth/me'),
+};
+
 export default api;

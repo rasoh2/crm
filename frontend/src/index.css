@@ -337,3 +337,57 @@ body {
     height: 65vh !important;
   }
 }
+
+/* ========================================
+   Ajustes Personalizados para Modo Noche (Dark Mode)
+   ======================================== */
+[data-bs-theme="dark"] {
+  --crm-bg: #0f172a;
+  --crm-card-bg: #1e293b;
+  --crm-border-color: #334155;
+  background-color: var(--crm-bg);
+  color: #f8fafc;
+}
+
+[data-bs-theme="dark"] .bg-light {
+  background-color: #1e293b !important;
+}
+
+[data-bs-theme="dark"] .chat-content table {
+  border-color: #334155;
+}
+
+[data-bs-theme="dark"] .chat-content th {
+  background-color: #1e293b;
+  color: #94a3b8;
+  border-bottom-color: #475569;
+}
+
+[data-bs-theme="dark"] .chat-content td {
+  background-color: #0f172a;
+  color: #f1f5f9;
+  border-bottom-color: #334155;
+}
+
+[data-bs-theme="dark"] .chat-content tr:nth-child(even) td {
+  background-color: #1e293b;
+}
+
+[data-bs-theme="dark"] .table-crm {
+  background-color: #1e293b;
+}
+
+[data-bs-theme="dark"] .table-crm th {
+  background-color: #0f172a !important;
+  color: #94a3b8;
+  border-bottom-color: #334155;
+}
+
+[data-bs-theme="dark"] .table-crm td {
+  color: #f1f5f9;
+  border-bottom-color: #1e293b;
+}
+
+[data-bs-theme="dark"] .table-crm tbody tr:hover {
+  background-color: #334155 !important;
+}

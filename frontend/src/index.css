@@ -474,6 +474,109 @@ body {
    ======================================== */
 [data-bs-theme="dark"] .bg-light {
   background-color: #141c2e !important;
+  border-color: #1e293b !important;
+}
+
+/* Sobrescritura Global de Fondos Blancos y Textos en Modo Noche */
+[data-bs-theme="dark"] .bg-white {
+  background-color: var(--crm-card-bg) !important;
+  color: var(--crm-text-main) !important;
+}
+
+[data-bs-theme="dark"] .text-dark {
+  color: #f8fafc !important;
+}
+
+[data-bs-theme="dark"] .text-muted {
+  color: #94a3b8 !important;
+}
+
+[data-bs-theme="dark"] .card-header {
+  background-color: var(--crm-card-bg) !important;
+  border-bottom-color: var(--crm-border-color) !important;
+  color: #f8fafc !important;
+}
+
+[data-bs-theme="dark"] .card-header h6 {
+  color: #cbd5e1 !important;
+}
+
+[data-bs-theme="dark"] .form-select,
+[data-bs-theme="dark"] .form-control {
+  background-color: #0b0f19 !important;
+  color: #f8fafc !important;
+  border-color: #334155 !important;
+}
+
+[data-bs-theme="dark"] .form-select:focus,
+[data-bs-theme="dark"] .form-control:focus {
+  background-color: #0b0f19 !important;
+  color: #f8fafc !important;
+  border-color: #6366f1 !important;
+  box-shadow: 0 0 0 0.25rem rgba(99, 102, 241, 0.25) !important;
+}
+
+/* ========================================
+   Tarjetas KPI — Paletas en Modo Día y Noche Pastel
+   ======================================== */
+.kpi-card-primary {
+  background: var(--crm-primary-gradient);
+  color: #ffffff;
+}
+
+.kpi-card-active {
+  background-color: #ffffff;
+  border: 1px solid var(--crm-border-color);
+  border-left: 4px solid #0891b2 !important;
+}
+
+.kpi-card-critical {
+  background-color: #ffffff;
+  border: 1px solid var(--crm-border-color);
+  border-left: 4px solid #e11d48 !important;
+}
+
+.kpi-card-prob {
+  background-color: #ffffff;
+  border: 1px solid var(--crm-border-color);
+  border-left: 4px solid #10b981 !important;
+}
+
+/* Modo Noche (Paleta Pastel Oscura) */
+[data-bs-theme="dark"] .kpi-card-active {
+  background-color: #0c202d !important;
+  border-color: #1e293b !important;
+  border-left: 4px solid #06b6d4 !important;
+}
+[data-bs-theme="dark"] .kpi-card-active .kpi-title {
+  color: #a5f3fc !important;
+}
+[data-bs-theme="dark"] .kpi-card-active .kpi-value {
+  color: #f0fdfa !important;
+}
+
+[data-bs-theme="dark"] .kpi-card-critical {
+  background-color: #27141e !important;
+  border-color: #1e293b !important;
+  border-left: 4px solid #f43f5e !important;
+}
+[data-bs-theme="dark"] .kpi-card-critical .kpi-title {
+  color: #fecdd3 !important;
+}
+[data-bs-theme="dark"] .kpi-card-critical .kpi-value {
+  color: #fff1f2 !important;
+}
+
+[data-bs-theme="dark"] .kpi-card-prob {
+  background-color: #0d241c !important;
+  border-color: #1e293b !important;
+  border-left: 4px solid #10b981 !important;
+}
+[data-bs-theme="dark"] .kpi-card-prob .kpi-title {
+  color: #a7f3d0 !important;
+}
+[data-bs-theme="dark"] .kpi-card-prob .kpi-value {
+  color: #ecfdf5 !important;
 }
 
 [data-bs-theme="dark"] .chat-content table {

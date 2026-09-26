@@ -143,13 +143,17 @@ export default function PipelineDashboard({ opportunities: initialOpps = null })
     ],
   };
 
+  const isDark = typeof document !== 'undefined' && document.documentElement.getAttribute('data-bs-theme') === 'dark';
+  const chartTextColor = isDark ? '#cbd5e1' : '#475569';
+  const chartGridColor = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)';
+
   const doughnutOptions = {
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
       legend: {
         position: 'bottom',
-        labels: { boxWidth: 12, padding: 15, font: { size: 12 } },
+        labels: { boxWidth: 12, padding: 15, font: { size: 12 }, color: chartTextColor },
       },
       tooltip: {
         callbacks: {
@@ -175,12 +179,12 @@ export default function PipelineDashboard({ opportunities: initialOpps = null })
         label: `Valor (${displayCurrency})`,
         data: valueByPriorityConverted,
         backgroundColor: [
-          'rgba(108, 117, 125, 0.75)', // Baja
-          'rgba(13, 202, 240, 0.75)',  // Media
-          'rgba(255, 193, 7, 0.75)',   // Alta
-          'rgba(220, 53, 69, 0.75)',   // Crítica
+          'rgba(148, 163, 184, 0.75)', // Baja
+          'rgba(6, 182, 212, 0.75)',   // Media
+          'rgba(245, 158, 11, 0.75)',  // Alta
+          'rgba(244, 63, 94, 0.75)',   // Crítica
         ],
-        borderColor: ['#6c757d', '#0dcaf0', '#ffc107', '#dc3545'],
+        borderColor: ['#94a3b8', '#06b6d4', '#f59e0b', '#f43f5e'],
         borderWidth: 1.5,
         borderRadius: 6,
       },
@@ -201,12 +205,17 @@ export default function PipelineDashboard({ opportunities: initialOpps = null })
             return ` Valor: ${new Intl.NumberFormat().format(Math.round(val))} ${displayCurrency}`;
           },
         },
-      },
+        },
     },
     scales: {
+      x: {
+        ticks: { color: chartTextColor },
+        grid: { color: chartGridColor },
+      },
       y: {
         beginAtZero: true,
         ticks: {
+          color: chartTextColor,
           callback: (value) => {
             if (displayCurrency === 'BTC') return `₿${value.toFixed(2)}`;
             if (displayCurrency === 'UF') return `${Math.round(value)} UF`;
@@ -215,6 +224,7 @@ export default function PipelineDashboard({ opportunities: initialOpps = null })
             return value;
           },
         },
+        grid: { color: chartGridColor },
       },
     },
   };
@@ -246,7 +256,7 @@ export default function PipelineDashboard({ opportunities: initialOpps = null })
       {/* Fila de Tarjetas KPIs */}
       <Row className="g-3 mb-4">
         <Col sm={6} lg={3}>
-          <Card className="border-0 shadow-sm rounded-3 h-100 bg-primary text-white">
+          <Card className="border-0 shadow-sm rounded-3 h-100 kpi-card-primary">
             <Card.Body className="d-flex align-items-center justify-content-between p-3">
               <div>
                 <small className="text-white-50 text-uppercase fw-bold">
@@ -264,15 +274,15 @@ export default function PipelineDashboard({ opportunities: initialOpps = null })
         </Col>
 
         <Col sm={6} lg={3}>
-          <Card className="border-0 shadow-sm rounded-3 h-100 bg-white">
-            <Card.Body className="d-flex align-items-center justify-content-between p-3 border-start border-4 border-info rounded-start">
+          <Card className="border-0 shadow-sm rounded-3 h-100 kpi-card-active">
+            <Card.Body className="d-flex align-items-center justify-content-between p-3">
               <div>
-                <small className="text-muted text-uppercase fw-bold">
+                <small className="text-uppercase fw-bold kpi-title opacity-75">
                   Oportunidades Activas
                 </small>
-                <h3 className="mb-0 fw-bold mt-1 text-dark">
+                <h3 className="mb-0 fw-bold mt-1 kpi-value">
                   {activeOpps.length}{' '}
-                  <small className="fs-6 text-muted">/ {opportunities.length}</small>
+                  <small className="fs-6 opacity-75">/ {opportunities.length}</small>
                 </h3>
               </div>
               <div className="bg-info bg-opacity-10 text-info rounded-circle p-3">
@@ -283,13 +293,13 @@ export default function PipelineDashboard({ opportunities: initialOpps = null })
         </Col>
 
         <Col sm={6} lg={3}>
-          <Card className="border-0 shadow-sm rounded-3 h-100 bg-white">
-            <Card.Body className="d-flex align-items-center justify-content-between p-3 border-start border-4 border-warning rounded-start">
+          <Card className="border-0 shadow-sm rounded-3 h-100 kpi-card-critical">
+            <Card.Body className="d-flex align-items-center justify-content-between p-3">
               <div>
-                <small className="text-muted text-uppercase fw-bold">
+                <small className="text-uppercase fw-bold kpi-title opacity-75">
                   Alta / Crítica
                 </small>
-                <h3 className="mb-0 fw-bold mt-1 text-dark">
+                <h3 className="mb-0 fw-bold mt-1 kpi-value">
                   {criticalCount}
                 </h3>
               </div>
@@ -301,13 +311,13 @@ export default function PipelineDashboard({ opportunities: initialOpps = null })
         </Col>
 
         <Col sm={6} lg={3}>
-          <Card className="border-0 shadow-sm rounded-3 h-100 bg-white">
-            <Card.Body className="d-flex align-items-center justify-content-between p-3 border-start border-4 border-success rounded-start">
+          <Card className="border-0 shadow-sm rounded-3 h-100 kpi-card-prob">
+            <Card.Body className="d-flex align-items-center justify-content-between p-3">
               <div>
-                <small className="text-muted text-uppercase fw-bold">
+                <small className="text-uppercase fw-bold kpi-title opacity-75">
                   Probabilidad Prom.
                 </small>
-                <h3 className="mb-0 fw-bold mt-1 text-dark">{avgProb}%</h3>
+                <h3 className="mb-0 fw-bold mt-1 kpi-value">{avgProb}%</h3>
               </div>
               <div className="bg-success bg-opacity-10 text-success rounded-circle p-3">
                 <BsAward size={24} />
@@ -321,7 +331,7 @@ export default function PipelineDashboard({ opportunities: initialOpps = null })
       <Row className="g-3">
         <Col lg={6}>
           <Card className="border-0 shadow-sm rounded-3 h-100">
-            <Card.Header className="bg-white border-0 pt-3 pb-0">
+            <Card.Header className="border-0 pt-3 pb-0">
               <h6 className="fw-bold mb-0 text-secondary">
                 Distribución por Etapa Comercial
               </h6>
@@ -334,7 +344,7 @@ export default function PipelineDashboard({ opportunities: initialOpps = null })
 
         <Col lg={6}>
           <Card className="border-0 shadow-sm rounded-3 h-100">
-            <Card.Header className="bg-white border-0 pt-3 pb-0">
+            <Card.Header className="border-0 pt-3 pb-0">
               <h6 className="fw-bold mb-0 text-secondary">
                 Valor Acumulado por Prioridad ({displayCurrency})
               </h6>

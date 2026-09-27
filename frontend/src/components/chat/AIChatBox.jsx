@@ -148,24 +148,21 @@ export default function AIChatBox() {
   return (
     <>
       <div className="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
-        <div>
-          <div className="d-flex align-items-center">
-            <BsStars className="me-2 text-warning fs-3" />
-            <h2 className="mb-0 fw-bold tracking-tight">Copilot Comercial</h2>
+        <div className="d-flex align-items-center">
+          <div className="bg-warning bg-opacity-25 text-warning p-2 rounded-circle me-3 shadow-2xs">
+            <BsStars className="fs-2 text-warning" />
           </div>
-          <p className="text-muted small mb-0 mt-1">
-            Asistente analítico con Function Calling y RAG. Utiliza la barra lateral para explorar empresas y plantillas.
-          </p>
+          <div>
+            <h2 className="mb-0 fw-bold tracking-tight">Copilot IA Comercial</h2>
+            <p className="text-muted small mb-0 mt-1">
+              Tu asistente inteligente para analizar oportunidades, métricas y especificaciones de clientes.
+            </p>
+          </div>
         </div>
 
-        <div className="d-flex align-items-center gap-2">
-          <Badge bg="primary" className="px-2 py-1 shadow-2xs d-flex align-items-center gap-1 font-monospace fw-normal" style={{ fontSize: '0.78rem' }} title="Modelo primario activo de alta velocidad">
-            <BsCpu /> Groq LPU (GPT-OSS-20B)
-          </Badge>
-          <Badge bg="secondary" text="light" className="px-2 py-1 shadow-2xs d-flex align-items-center gap-1 font-monospace fw-normal" style={{ fontSize: '0.78rem' }} title="Respaldo automático en alta disponibilidad">
-            <BsShieldCheck /> Respaldo: Gemini 3.8
-          </Badge>
-        </div>
+        <Badge bg="warning" text="dark" className="px-3 py-2 shadow-sm d-flex align-items-center gap-1 fw-bold fs-7 rounded-pill">
+          <BsStars /> ✨ Asistente IA Activo
+        </Badge>
       </div>
 
       <Row className="g-3">

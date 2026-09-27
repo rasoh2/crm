@@ -104,47 +104,38 @@ export default function Navbar() {
                 + Nueva Oportunidad
               </Nav.Link>
             </Nav>
-            <Nav className="align-items-center gap-2 mt-2 mt-lg-0">
-              {/* Indicador de Modelo IA Activo */}
-              <Badge
-                bg="dark"
-                text="light"
-                className="border border-secondary px-2 py-1 font-monospace fw-normal d-flex align-items-center shadow-2xs"
-                title="Modelo primario activo: Groq LPU (GPT-OSS-20B) | Respaldo: Gemini 3.8 Flash"
-                style={{ fontSize: '0.75rem' }}
-              >
-                <BsCpu className="me-1 text-info" />
-                <span>Groq LPU (GPT-OSS-20B)</span>
-              </Badge>
+          <Nav className="align-items-center gap-2 mt-2 mt-lg-0">
+            {/* Botón Destacado del Asistente IA */}
+            <Button
+              as={Link}
+              to="/chat"
+              variant={location.pathname === '/chat' ? 'warning' : 'outline-warning'}
+              size="sm"
+              className="fw-bold px-3 py-1 d-flex align-items-center rounded-pill shadow-sm animate-ai-btn"
+              title="Abrir Asistente Comercial con Inteligencia Artificial"
+            >
+              <BsStars className="me-1 fs-6 text-dark" />
+              <span className="text-dark">✨ Asistente IA</span>
+            </Button>
 
-              {/* Botón de Modo Noche / Día */}
-              <Button
-                variant={darkMode ? 'outline-light' : 'outline-secondary'}
-                size="sm"
-                onClick={() => setDarkMode(!darkMode)}
-                className="d-flex align-items-center justify-content-center p-1 px-2 rounded-3"
-                title={darkMode ? 'Cambiar a Modo Día (Claro)' : 'Cambiar a Modo Noche (Oscuro)'}
-              >
-                {darkMode ? (
-                  <>
-                    <BsSunFill className="text-warning me-1" /> <small>Modo Día</small>
-                  </>
-                ) : (
-                  <>
-                    <BsMoonStarsFill className="text-info me-1" /> <small>Modo Noche</small>
-                  </>
-                )}
-              </Button>
-
-              <Nav.Link
-                as={Link}
-                to="/chat"
-                active={location.pathname === '/chat'}
-                className="d-flex align-items-center"
-              >
-                <BsStars className="me-1 text-warning" />
-                Copilot
-              </Nav.Link>
+            {/* Botón de Modo Noche / Día */}
+            <Button
+              variant={darkMode ? 'outline-light' : 'outline-secondary'}
+              size="sm"
+              onClick={() => setDarkMode(!darkMode)}
+              className="d-flex align-items-center justify-content-center p-1 px-2 rounded-3"
+              title={darkMode ? 'Cambiar a Modo Día (Claro)' : 'Cambiar a Modo Noche (Oscuro)'}
+            >
+              {darkMode ? (
+                <>
+                  <BsSunFill className="text-warning me-1" /> <small>Modo Día</small>
+                </>
+              ) : (
+                <>
+                  <BsMoonStarsFill className="text-info me-1" /> <small>Modo Noche</small>
+                </>
+              )}
+            </Button>
 
               {/* Autenticación & Perfil del Usuario */}
               {currentUser ? (

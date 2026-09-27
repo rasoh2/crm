@@ -27,10 +27,17 @@ const authController = {
   },
 
   /**
-   * Iniciar sesión (Login con credenciales o roles demo)
+   * Iniciar sesión (Login estricto con validación de credenciales y perfiles demo)
    */
   login(req, res) {
     const { email } = req.body;
+
+    if (!email || !email.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Por favor ingresa un correo electrónico válido o selecciona una cuenta demo.',
+      });
+    }
 
     const demoUsers = {
       'admin@crm.com': { id: 'usr_admin', name: 'Sebastián Saavedra', email: 'admin@crm.com', role: 'Administrador CRM', avatar: '👨‍💻' },
@@ -39,14 +46,15 @@ const authController = {
       'demo@crm.com': { id: 'usr_demo', name: 'Usuario Demo CRM', email: 'demo@crm.com', role: 'Comercial Demo', avatar: '🚀' },
     };
 
-    const targetEmail = (email || 'demo@crm.com').toLowerCase();
-    const user = demoUsers[targetEmail] || {
-      id: `usr_${Date.now().toString(36)}`,
-      name: email ? email.split('@')[0] : 'Usuario Comercial',
-      email: email || 'usuario@crm-ai.com',
-      role: 'Ejecutivo Comercial',
-      avatar: '👤',
-    };
+    const targetEmail = email.trim().toLowerCase();
+    const user = demoUsers[targetEmail];
+
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        message: `El correo "${email}" no está registrado en el sistema. Selecciona una cuenta demo para acceder.`,
+      });
+    }
 
     const secret = process.env.JWT_SECRET || 'super_secret_jwt_key_crm_ai_2026';
     const token = jwt.sign(user, secret, { expiresIn: '24h' });

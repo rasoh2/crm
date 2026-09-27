@@ -21,9 +21,15 @@ export default function LoginPage() {
   const handleLogin = async (e, targetEmail = null) => {
     if (e) e.preventDefault();
     setError('');
-    setLoading(true);
 
-    const emailToUse = targetEmail || email || 'demo@crm.com';
+    const emailToUse = targetEmail || email.trim();
+
+    if (!emailToUse) {
+      setError('Por favor ingresa tu correo electrónico o selecciona una cuenta demo.');
+      return;
+    }
+
+    setLoading(true);
 
     try {
       const res = await authApi.login({ email: emailToUse, password: password || '123456' });
@@ -35,7 +41,7 @@ export default function LoginPage() {
       navigate('/');
     } catch (err) {
       console.error('Error al iniciar sesión:', err);
-      setError(err.response?.data?.message || 'Error al verificar credenciales. Intente nuevamente.');
+      setError(err.response?.data?.message || 'Credenciales inválidas. Por favor selecciona una cuenta demo.');
     } finally {
       setLoading(false);
     }

@@ -111,11 +111,13 @@ export default function Navbar() {
               to="/chat"
               variant={location.pathname === '/chat' ? 'warning' : 'outline-warning'}
               size="sm"
-              className="fw-bold px-3 py-1 d-flex align-items-center rounded-pill shadow-sm animate-ai-btn"
+              className={`fw-bold px-3 py-1 d-flex align-items-center rounded-pill shadow-sm animate-ai-btn ${
+                location.pathname === '/chat' ? 'text-dark' : 'text-warning'
+              }`}
               title="Abrir Asistente Comercial con Inteligencia Artificial"
             >
-              <BsStars className="me-1 fs-6 text-dark" />
-              <span className="text-dark">✨ Asistente IA</span>
+              <BsStars className="me-1 fs-6" />
+              <span>✨ Asistente IA</span>
             </Button>
 
             {/* Botón de Modo Noche / Día */}

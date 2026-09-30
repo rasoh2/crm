@@ -28,7 +28,11 @@ async function start() {
       console.log(`⚡ WebSocket Server listo en http://localhost:${PORT}\n`);
     });
   } catch (error) {
-    console.error('💥 Error al iniciar el servidor:', error.message);
+    const errorDetails = error.message || error.code || error;
+    console.error('💥 Error al iniciar el servidor:', errorDetails);
+    if (error.code === 'ECONNREFUSED') {
+      console.error('👉 Motivo: No se pudo conectar a PostgreSQL en el puerto 5432 (Conexión rechazada). Revisa que PostgreSQL esté corriendo o configura una URL de Neon DB en el archivo .env.');
+    }
     process.exit(1);
   }
 }

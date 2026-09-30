@@ -11,12 +11,12 @@ const groq = new Groq({
 });
 
 const groqConfig = {
-  model: process.env.GROQ_MODEL || 'openai/gpt-oss-20b',
-  fallbackModel: 'qwen/qwen3.8-27b',
+  model: process.env.GROQ_MODEL || 'qwen/qwen3.8-27b',
+  fallbackModel: 'openai/gpt-oss-120b',
   generationConfig: {
     temperature: 0.3,
     top_p: 0.8,
-    max_tokens: 1024,
+    max_tokens: 2500,
   },
 };
 

@@ -177,58 +177,50 @@ async function processMessage(userMessage, conversationHistory = []) {
           OpportunityService.getPipelineSummary(),
         ]);
 
-        if (isMetricsOnly) {
-          // Intent 2: METRICS (~40 tokens) - No envía listado individual de 30 empresas
-          crmContextText = `
-=== RESUMEN DE MÉTRICAS DEL PIPELINE ===
-Oportunidades Totales: ${summary.total_opportunities} | Valor Acumulado: $${summary.total_value} USD | Prob. Promedio: ${Math.round(summary.avg_probability || 0)}%
-Estado Oportunidades: Ganadas=${summary.won}, Activas=${summary.active}, Críticas=${summary.critical_count}
-======================================
-`;
-        } else if (isFollowupOnly) {
-          // Intent 3: FOLLOWUP (~100 tokens) - Envía solo compromisos con fecha de seguimiento
-          const followupOpps = opps.filter((o) => o.next_follow_up_date);
-          const lines = followupOpps.map((o) => `${o.company_name} | ${o.opportunity_name} | Seg: ${o.next_follow_up_date} | Owner: ${o.owner}`).join('\n');
-          crmContextText = `
-=== AGENDA DE SEGUIMIENTOS Y COMPROMISOS ===
-${lines || 'Sin compromisos de seguimiento agendados.'}
-===========================================
-`;
-        } else if (isDocOnly) {
-          // Intent 4: RAG DOCUMENT - Envía solo coincidencias de documentos
-          const docResults = searchDocuments(userMessage, '');
-          const ragText = Array.isArray(docResults) && docResults.length > 0
-            ? docResults.map(d => `- ${d.title || d.name}: ${d.content || d.snippet}`).join('\n')
-            : 'Sin documentos adjuntos coincidentes.';
-          crmContextText = `
-=== DOCUMENTOS Y ARCHIVOS DE SOPORTE ===
-${ragText}
-=======================================
-`;
-        } else {
-          // Intent 5: COMPANY / GENERAL - Context Pruning por empresa o catálogo TSV compacto
-          const matchedOpps = opps.filter(
+        const hasCompanyFilter = opps.some((o) =>
+          queryLower.includes(o.company_name.toLowerCase()) ||
+          queryLower.includes(o.opportunity_name.toLowerCase())
+        );
+
+        let relevantOpps = opps;
+        if (hasCompanyFilter) {
+          relevantOpps = opps.filter(
             (o) =>
               queryLower.includes(o.company_name.toLowerCase()) ||
               queryLower.includes(o.opportunity_name.toLowerCase()) ||
               queryLower.includes(o.owner.toLowerCase())
           );
-
-          const targetOpps = matchedOpps.length > 0 ? matchedOpps : opps;
-          const oppLines = targetOpps
-            .map(
-              (o) =>
-                `${o.company_name} | ${o.opportunity_name} | $${o.estimated_value} ${o.currency} | ${o.stage} | Prio:${o.priority} | ${o.probability}% | ${o.owner}`
-            )
-            .join('\n');
-
-          crmContextText = `
-=== DATOS DEL PIPELINE (${targetOpps.length} Oportunidades) ===
-Resumen: Total=${summary.total_opportunities}, Valor=$${summary.total_value}USD, Ganadas=${summary.won}, Activas=${summary.active}
-${oppLines}
-=====================================
-`;
         }
+
+        const oppLines = relevantOpps
+          .map(
+            (o) =>
+              `${o.company_name} | ${o.opportunity_name} | $${Number(o.estimated_value).toLocaleString('es-CL')} ${o.currency} | Etapa:${o.stage} | Prio:${o.priority} | Prob:${o.probability}% | Resp:${o.owner} | PróxSeguimiento:${o.next_follow_up_date ? new Date(o.next_follow_up_date).toLocaleDateString('es-CL') : 'Sin fecha'} | ÚltimaInteracción:${o.last_interaction_summary || 'N/A'} | Recomendación:${o.ai_recommendation || 'N/A'}`
+          )
+          .join('\n');
+
+        let docsSection = '';
+        if (isDocOnly || /(sla|cifrado|normativa|seguridad|contrato|anexo|especificaci)/i.test(queryLower)) {
+          const docResults = searchDocuments(userMessage, '');
+          if (Array.isArray(docResults) && docResults.length > 0) {
+            docsSection = `\n=== DOCUMENTOS TÉCNICOS Y ANEXOS (RAG) ===\n` +
+              docResults.map(d => `- ${d.title || d.name}: ${d.content || d.snippet}`).join('\n') +
+              `\n=========================================\n`;
+          }
+        }
+
+        crmContextText = `
+=== RESUMEN GLOBAL DEL PIPELINE COMERCIAL ===
+Total Oportunidades: ${summary.total_opportunities} | Valor Acumulado: $${Number(summary.total_value).toLocaleString('es-CL')} USD | Prob. Promedio: ${Math.round(summary.avg_probability || 0)}%
+Estado de Cartera: Ganadas=${summary.won} | Activas=${summary.active} | Críticas=${summary.critical_count}
+============================================
+
+=== LISTADO DE OPORTUNIDADES (${relevantOpps.length} Registros) ===
+${oppLines}
+============================================================
+${docsSection}
+*REGLA DE FORMATO ESTRICTA*: Si tu respuesta incluye o compara 2 o más oportunidades, métricas o seguimientos, preséntalos OBLIGATORIAMENTE en una TABLA Markdown bien estructurada con columnas claras, precedida y seguida por una línea en blanco.
+`;
       } catch (dbErr) {
         console.warn('⚠️ No se pudo cargar el contexto por intención:', dbErr.message);
       }
@@ -257,9 +249,13 @@ ${oppLines}
         completion = await sendGroqCompletionWithRetry(messages, groqConfig.fallbackModel);
       }
       responseText = completion.choices[0]?.message?.content || '';
+      if (!responseText.trim()) {
+        console.warn('⚠️ Groq devolvió respuesta vacía. Activando respaldo con Gemini...');
+        responseText = await processMessageWithGeminiBackup(userMessage, crmContextText, conversationHistory);
+      }
     } catch (groqErr) {
       // 3. Fallback de alta disponibilidad a Google Gemini ante límites de cuota (429) o fallos de red
-      console.warn(`⚠️ Groq Cloud no disponible (${groqErr.message.substring(0, 60)}...). Ejecutando Respaldo con Gemini...`);
+      console.warn(`⚠️ Groq Cloud no disponible (${groqErr.message?.substring(0, 60)}...). Ejecutando Respaldo con Gemini...`);
       try {
         responseText = await processMessageWithGeminiBackup(userMessage, crmContextText, conversationHistory);
       } catch (geminiErr) {

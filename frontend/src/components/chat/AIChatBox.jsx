@@ -9,19 +9,16 @@ function preprocessMarkdown(content) {
   if (typeof content !== 'string') return '';
   let text = content;
 
-  // 1. Convertir '||' o '|  |' pegados en saltos de línea con '|'
-  text = text.replace(/\|[ \t]*\|/g, '|\n|');
+  // 1. Separar filas de tabla pegadas horizontalmente (| Celda | | Otra | o | Celda || Otra |)
+  text = text.replace(/\|\s*\|(?=[^|\n]+)/g, '|\n|');
 
-  // 2. Reparar saltos de línea accidentales dentro de celdas sin cerrar con '|'
-  text = text.replace(/([^|\n])\n[ \t]*\|/g, '$1 |');
+  // 2. Asegurar que las líneas que inician una tabla tengan doble salto previo si vienen precedidas de texto
+  text = text.replace(/([^\n|])\n+(\|[^\n]+\|\n\|[\s:-|-]+\|)/g, (_, p1, p2) => `${p1}\n\n${p2}`);
 
-  // 3. Garantizar que cada fila numerada de tabla (ej: "| 1 |", "| 2 |") comience en una nueva línea
-  text = text.replace(/([^\n])\s*(\|\s*\d+\s*\|)/g, '$1\n$2');
+  // 3. Asegurar doble salto al finalizar la tabla si continúa texto regular
+  text = text.replace(/(\|[^\n]+\|)\n+([^|\n\s])/g, (_, p1, p2) => `${p1}\n\n${p2}`);
 
-  // 4. Garantizar que el encabezado separador "|---|..." tenga un salto de línea antes de la primera fila
-  text = text.replace(/(\|-+[-| \t]*)\s*\|(?=\s*\d+\s*\|)/g, '$1\n|');
-
-  // 5. Normalizar saltos de línea múltiples
+  // 4. Normalizar exceso de saltos de línea a un máximo de 2
   text = text.replace(/\n{3,}/g, '\n\n');
 
   return text.trim();
@@ -198,7 +195,19 @@ export default function AIChatBox() {
                     </div>
                     <div className="chat-content" style={{ fontSize: '0.95rem' }}>
                       {msg.role === 'assistant' ? (
-                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                        <ReactMarkdown
+                          remarkPlugins={[remarkGfm]}
+                          components={{
+                            table: ({ node, ...props }) => (
+                              <div className="table-responsive my-2 rounded-2 border shadow-2xs">
+                                <table className="table table-sm table-hover align-middle mb-0" {...props} />
+                              </div>
+                            ),
+                            thead: ({ node, ...props }) => <thead className="table-light text-nowrap" {...props} />,
+                            th: ({ node, ...props }) => <th className="fw-semibold px-2 py-1 text-secondary" style={{ fontSize: '0.85rem' }} {...props} />,
+                            td: ({ node, ...props }) => <td className="px-2 py-1" style={{ fontSize: '0.85rem' }} {...props} />,
+                          }}
+                        >
                           {preprocessMarkdown(msg.content)}
                         </ReactMarkdown>
                       ) : (

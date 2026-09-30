@@ -4,6 +4,7 @@ import { BsSend, BsStars, BsPerson, BsBuilding, BsChatText, BsLightningCharge, B
 import { chatApi, opportunityApi } from '../../services/api';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import ChatTable from './ChatTable';
 
 function preprocessMarkdown(content) {
   if (typeof content !== 'string') return '';
@@ -198,11 +199,7 @@ export default function AIChatBox() {
                         <ReactMarkdown
                           remarkPlugins={[remarkGfm]}
                           components={{
-                            table: ({ node, ...props }) => (
-                              <div className="table-responsive my-2 rounded-2 border shadow-2xs">
-                                <table className="table table-sm table-hover align-middle mb-0" {...props} />
-                              </div>
-                            ),
+                            table: ({ node, ...props }) => <ChatTable {...props} />,
                             thead: ({ node, ...props }) => <thead className="table-light text-nowrap" {...props} />,
                             th: ({ node, ...props }) => <th className="fw-semibold px-2 py-1 text-secondary" style={{ fontSize: '0.85rem' }} {...props} />,
                             td: ({ node, ...props }) => <td className="px-2 py-1" style={{ fontSize: '0.85rem' }} {...props} />,
